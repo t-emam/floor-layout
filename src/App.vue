@@ -18,6 +18,9 @@ const tables = ref([
     x: 100,
     y: 100,
     shape: 'rectangle',
+    type: 'table',
+    table_id: '',
+    number_of_seats: 4,
   },
   {
     id: '2',
