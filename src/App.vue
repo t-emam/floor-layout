@@ -7,6 +7,7 @@ import Shape from './components/Shape.vue';
 const configKonva = {
   width: window.innerWidth,
   height: window.innerHeight,
+  draggable: true,
 };
 
 const tables = ref([
@@ -154,36 +155,36 @@ function onDragItem(type) {
   dragAction.value = attrs;
 }
 
-// function onZoom(e) {
-//   e.evt.preventDefault();
-//   console.log(stageEl);
-//   const oldScale = stageEl.value.scaleX();
-//   const pointer = stageEl.value.getPointerPosition();
+function onZoom(e) {
+  e.evt.preventDefault();
+  const stage = stageEl.value.getNode();
+  const oldScale = stage.scaleX();
+  const pointer = stage.getPointerPosition();
 
-//   const mousePointTo = {
-//     x: (pointer.x - stageEl.value.x()) / oldScale,
-//     y: (pointer.y - stageEl.value.y()) / oldScale,
-//   };
+  const mousePointTo = {
+    x: (pointer.x - stage.x()) / oldScale,
+    y: (pointer.y - stage.y()) / oldScale,
+  };
 
-//   // how to scale? Zoom in? Or zoom out?
-//   let direction = e.evt.deltaY > 0 ? 1 : -1;
+  // how to scale? Zoom in? Or zoom out?
+  let direction = e.evt.deltaY > 0 ? 1 : -1;
 
-//   // when we zoom on trackpad, e.evt.ctrlKey is true
-//   // in that case lets revert direction
-//   if (e.evt.ctrlKey) {
-//     direction = -direction;
-//   }
-//   const scaleBy = 1.1;
-//   const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+  // when we zoom on trackpad, e.evt.ctrlKey is true
+  // in that case lets revert direction
+  if (e.evt.ctrlKey) {
+    direction = -direction;
+  }
+  const scaleBy = 1.1;
+  const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
 
-//   stageEl.value.scale({ x: newScale, y: newScale });
+  stage.scale({ x: newScale, y: newScale });
 
-//   const newPos = {
-//     x: pointer.x - mousePointTo.x * newScale,
-//     y: pointer.y - mousePointTo.y * newScale,
-//   };
-//   stageEl.value.position(newPos);
-// }
+  const newPos = {
+    x: pointer.x - mousePointTo.x * newScale,
+    y: pointer.y - mousePointTo.y * newScale,
+  };
+  stage.position(newPos);
+}
 </script>
 
 <template>
@@ -294,6 +295,7 @@ function onDragItem(type) {
     ref="stage-el"
     @mousedown="handleStageMouseDown"
     @touchstart="handleStageMouseDown"
+    @wheel="onZoom"
   >
     <v-layer ref="layer-el">
       <Shape
@@ -303,10 +305,7 @@ function onDragItem(type) {
         :selected="selectedShape?.id === table.id"
         @transformend="handleTransformEnd"
         @dragend="handleTransformEnd"
-        @click="
-          selectedShape = $event;
-          console.log(selectedShape);
-        "
+        @click="selectedShape = $event"
       />
       <v-transformer ref="transformer" />
     </v-layer>
