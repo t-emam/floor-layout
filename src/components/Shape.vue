@@ -8,7 +8,6 @@ const props = defineProps({
 
 const emit = defineEmits(['transformend', 'dragend', 'click']);
 
-const isDragging = ref(false);
 const nodeRef = useTemplateRef('shape');
 
 const getTableComponent = (shape) => {
@@ -27,12 +26,7 @@ const getTableComponent = (shape) => {
   return 'v-circle';
 };
 
-const handleDragStart = () => {
-  isDragging.value = true;
-  emit;
-};
 const handleDragEnd = (e) => {
-  isDragging.value = false;
   emit('dragend', e, props.config);
 };
 
@@ -55,7 +49,6 @@ defineExpose({
     ref="shape"
     @transformend="$emit('transformend', $event)"
     @click="$emit('click', config)"
-    @dragstart="handleDragStart"
     @dragend="handleDragEnd"
   >
     <component
