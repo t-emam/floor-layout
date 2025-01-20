@@ -2,12 +2,12 @@ import Konva from 'konva';
 
 export const useRectangleTable = () => {
 
-  const buildRectTable = (number_of_seats, event, direction='LEFT_SIDE') => {
+  const buildRectTable = (number_of_seats, event, direction='LEFT_SIDE', width=120, height=250) => {
     const table = {
       id: new Date().getTime(),
       text: `Table ${ Math.random(1, 10000) }`,
-      width: direction === 'LEFT_SIDE'? 250 : 120,
-      height:  direction === 'LEFT_SIDE'? 120: 250,
+      width: direction === 'LEFT_SIDE'? Number(width) : Number(height),
+      height:  direction === 'LEFT_SIDE'? Number(height): Number(width),
       number_of_seats,
     };
 

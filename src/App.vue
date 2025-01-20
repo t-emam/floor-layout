@@ -306,7 +306,7 @@ const handleOnBuild = (params) => {
   if (params.shape === 'circle') {
     table = buildCircleTable(params.size, event, params.width, params.height);
   } else {
-    table = buildRectTable(params.size, event, params.shape === 'rectangle_upside' ? 'UPSIDE' : null)
+    table = buildRectTable(params.size, event, params.shape === 'rectangle_upside' ? 'UPSIDE' : null, params.width, params.height)
   }
 
   return nextTick(() => {
