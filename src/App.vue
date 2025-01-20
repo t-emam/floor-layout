@@ -1,5 +1,5 @@
 <script setup>
-import { ref, useTemplateRef } from 'vue';
+import { nextTick, ref, useTemplateRef } from 'vue';
 import { onMounted } from 'vue';
 import { Circle, Diamond, Square, SquareDashed } from 'lucide-vue-next';
 import Shape from './components/Shape.vue';
@@ -61,6 +61,7 @@ const tables = ref([
 
 const stageEl = useTemplateRef('stage-el');
 const layerEl = useTemplateRef('layer-el');
+const itemRefs = useTemplateRef('items');
 const transformer = useTemplateRef('transformer');
 const selectedShape = ref(null);
 const dragAction = ref(null);
@@ -110,33 +111,49 @@ function handleStageMouseDown(e) {
   updateTransformer();
 }
 
-function updateTransformer() {
+function updateTransformer(force = false) {
   const transformerNode = transformer.value.getNode();
-  const stage = transformerNode.getStage();
 
-  const selectedNode = stage.findOne('.' + selectedShape.value?.id);
-  // do nothing if selected node is already attached
-  if (selectedNode === transformerNode.node()) {
+  if (!selectedShape.value) {
+    transformerNode.nodes([]);
     return;
+  }
+  const tableIndex = tables.value.findIndex(
+    (tabel) => tabel.id === selectedShape.value?.id
+  );
+  const selectedNode = itemRefs.value[tableIndex].nodeRef.getNode();
+
+  // do nothing if selected node is already attached
+  if (selectedNode === transformerNode.node() && !force) {
+    return;
+  }
+
+  if (force) {
+    transformerNode.nodes([]);
   }
 
   if (selectedNode) {
     // attach to another node
-    transformerNode.nodes([selectedNode]);
+    nextTick(() => transformerNode.nodes([selectedNode]));
   } else {
     // remove transformer
     transformerNode.nodes([]);
   }
 }
 
-function handleTransformEnd(e) {
+async function handleTransformEnd(e) {
   const shape = tables.value.find((r) => r.id === selectedShape.value.id);
 
   shape.x = e.target.x();
   shape.y = e.target.y();
-  shape.rotation = e.target.rotation();
-  shape.scaleX = e.target.scaleX();
-  shape.scaleY = e.target.scaleY();
+
+  shape.width = e.target.width() * e.target.scaleX();
+  shape.height = e.target.height() * e.target.scaleY();
+  // reset scale to 1
+  e.target.scaleX(1);
+  e.target.scaleY(1);
+
+  updateTransformer(true);
 }
 
 function onDragItem(type) {
@@ -153,6 +170,11 @@ function onDragItem(type) {
     attrs = { ...attrs, width: 100, height: 25 };
   }
   dragAction.value = attrs;
+}
+
+function onDropItem(e, item) {
+  item.x = e.target.x();
+  item.y = e.target.y();
 }
 
 function onZoom(e) {
@@ -301,13 +323,19 @@ function onZoom(e) {
       <Shape
         v-for="table of tables"
         :key="table.id"
+        ref="items"
         :config="table"
         :selected="selectedShape?.id === table.id"
         @transformend="handleTransformEnd"
-        @dragend="handleTransformEnd"
+        @dragend="onDropItem"
         @click="selectedShape = $event"
       />
-      <v-transformer ref="transformer" />
+      <v-transformer
+        ref="transformer"
+        :config="{
+          rotateEnabled: false,
+        }"
+      />
     </v-layer>
   </v-stage>
 </template>
