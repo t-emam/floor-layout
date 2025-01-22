@@ -22,8 +22,8 @@ const tables = ref([
     text: '1',
     height: 50,
     width: 50,
-    x: 100,
-    y: 100,
+    x: 500,
+    y: 300,
     shape: 'rectangle',
     type: 'table',
     table_id: '',
@@ -35,8 +35,8 @@ const tables = ref([
     active: true,
     width: 50,
     height: 50,
-    x: 300,
-    y: 100,
+    x: 450,
+    y: 300,
     shape: 'circle',
     type: 'table',
     number_of_seats: 8,
@@ -45,7 +45,7 @@ const tables = ref([
     id: '3',
     text: 'Indoor',
     x: 400,
-    y: 400,
+    y: 250,
     width: 400,
     height: 400,
     shape: 'section',
@@ -83,15 +83,30 @@ onMounted(() => {
   con.addEventListener('dragover', (e) => {
     e.preventDefault();
   });
-
   con.addEventListener('drop', (e) => {
     e.preventDefault();
     stageNode.setPointersPositions(e);
-    tables.value.push({
-      ...dragAction.value,
-      ...stageNode.getPointerPosition(e),
-    });
-    dragAction.value = null;
+
+    const pointerPosition = stageNode.getPointerPosition(e);
+
+    if (pointerPosition) {
+      // Account for stage scale and position
+      const scaleX = stageNode.scaleX();
+      const scaleY = stageNode.scaleY();
+      const stagePosition = stageNode.position();
+
+      const adjustedPosition = {
+        x: (pointerPosition.x - stagePosition.x) / scaleX,
+        y: (pointerPosition.y - stagePosition.y) / scaleY,
+      };
+
+      tables.value.push({
+        ...dragAction.value,
+        ...adjustedPosition,
+      });
+
+      dragAction.value = null;
+    }
   });
 });
 
@@ -157,8 +172,14 @@ async function handleTransformEnd(e) {
   shape.x = e.target.x();
   shape.y = e.target.y();
 
-  shape.width = Math.max(e.target.width() * e.target.scaleX(), 30);
-  shape.height = Math.max(e.target.height() * e.target.scaleY(), 30);
+  shape.width = Math.max(
+    e.target.width() * e.target.scaleX(),
+    shape.shape === 'barrier' ? 1 : 30
+  );
+  shape.height = Math.max(
+    e.target.height() * e.target.scaleY(),
+    shape.shape === 'barrier' ? 1 : 30
+  );
   // reset scale to 1
   e.target.scaleX(1);
   e.target.scaleY(1);
@@ -167,13 +188,14 @@ async function handleTransformEnd(e) {
 }
 
 function handleDragStart(e, shape) {
+  e.target.moveToTop();
   // Store the initial position before the drag starts
-  dragAction.value = {
-    ...dragAction.value,
-    id: shape.id,
-    initialX: shape.x,
-    initialY: shape.y,
-  };
+  // dragAction.value = {
+  //   ...dragAction.value,
+  //   id: shape.id,
+  //   initialX: shape.x,
+  //   initialY: shape.y,
+  // };
 }
 
 function onDragItem(type) {
@@ -182,9 +204,7 @@ function onDragItem(type) {
     text: type === 'label' ? 'Label' : tables.value.length + 1 + '',
     shape: type,
   };
-  if (type === 'circle') {
-    attrs = { ...attrs, radius: 25 };
-  } else if (type === 'rectangle' || type === 'label') {
+  if (type === 'circle' || type === 'rectangle' || type === 'label') {
     attrs = { ...attrs, width: 50, height: 50 };
   } else if (type === 'barrier') {
     attrs = { ...attrs, width: 100, height: 7, text: null };
@@ -202,47 +222,8 @@ function onDragItem(type) {
 }
 
 function onDropItem(e, shape) {
-  console.log('drop item');
-  const stage = stageEl.value.getNode();
-  const newPos = stage.getPointerPosition();
-
-  // Check for overlaps with other shapes
-  const overlaps = checkForOverlap(newPos.x, newPos.y, shape);
-
-  if (overlaps) {
-    // Revert the position to the initial one if there is an overlap
-    shape.x = dragAction.value.initialX;
-    shape.y = dragAction.value.initialY;
-  } else {
-    // Otherwise, apply the new position
-    shape.x = newPos.x;
-    shape.y = newPos.y;
-  }
-}
-
-function checkForOverlap(newX, newY, shape) {
-  // Loop through all shapes and check if any of them overlap
-  for (let otherShape of tables.value) {
-    if (otherShape.id !== shape.id) {
-      const otherShapeBounds = itemRefs.value[
-        tables.value.indexOf(otherShape)
-      ].nodeRef
-        .getNode()
-        .getClientRect();
-
-      const isOverlap =
-        newX + shape.width > otherShapeBounds.x &&
-        newX < otherShapeBounds.x + otherShapeBounds.width &&
-        newY + shape.height > otherShapeBounds.y &&
-        newY < otherShapeBounds.y + otherShapeBounds.height;
-
-      if (isOverlap) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+  shape.x = e.target.x();
+  shape.y = e.target.y();
 }
 
 function onZoom(e) {
@@ -411,6 +392,18 @@ function onZoom(e) {
         ref="transformer"
         :config="{
           rotateEnabled: selectedShape?.shape === 'rectangle',
+          centeredScaling: true,
+          rotationSnaps: [0, 90, 180, 270],
+          boundBoxFunc: (oldBoundBox, newBoundBox) => {
+            if (
+              Math.abs(newBoundBox.width) < 30 ||
+              Math.abs(newBoundBox.height) < 30
+            ) {
+              return oldBoundBox;
+            }
+
+            return newBoundBox;
+          },
         }"
       />
     </v-layer>
