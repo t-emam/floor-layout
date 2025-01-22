@@ -19,6 +19,7 @@ import {
 import Shape from './components/Shape.vue';
 import Editor from './components/Editor.vue';
 import Zoom from './components/Zoom.vue';
+import Export from './components/Export.vue';
 
 const {buildRectTable} = useRectangleTable();
 const {buildCircleTable} = useCircleTable();
@@ -321,7 +322,11 @@ const handleOnBuild = (params) => {
 <template>
   <div class="stage-container" id="stageContainer">
     <Editor @build="handleOnBuild"/>
-    <Zoom @zoom="updateZoom"/>
+
+    <div class="flex gap-4 absolute start-4 bottom-2">
+       <Zoom @zoom="updateZoom"/>
+       <Export :layer="layerEl" />
+    </div>
     <div class="absolute top-0 z-10 w-full py-2">
       <div
           class="flex justify-center items-center gap-3 py-2 px-3 w-fit mx-auto border shadow-lg rounded-lg z-1 bg-white"

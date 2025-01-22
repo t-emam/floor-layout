@@ -29,7 +29,7 @@ const zoomIn = () => {
 
 <template>
   <div
-      class='flex items-center gap-2 absolute  left-4 bottom-2 bg-white p-2 rounded-lg shadow-lg border border-gray-200 z-20'>
+      class='flex items-center gap-2 bg-white p-2 rounded-lg shadow-lg border border-gray-200 z-20'>
     <button class="p-2 rounded-lg disabled:bg-gray-100 disabled:opacity-35" :disabled='zoom <=5' @click='zoomOut'>
       <ZoomIn size='23px'/>
     </button>
