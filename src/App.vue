@@ -1,8 +1,14 @@
 <script setup>
 import { nextTick, ref, useTemplateRef } from 'vue';
 import { onMounted } from 'vue';
-import { Circle, Diamond, Square, SquareDashed } from 'lucide-vue-next';
+import {
+  Circle,
+  LayoutTemplateIcon,
+  Square,
+  SquareDashed,
+} from 'lucide-vue-next';
 import Shape from './components/Shape.vue';
+import FloorSection from './components/Section.vue';
 
 const configKonva = {
   width: window.innerWidth,
@@ -27,32 +33,36 @@ const tables = ref([
     id: '2',
     text: '2',
     active: true,
-    radius: 25,
-    x: 100,
+    width: 50,
+    height: 50,
+    x: 300,
     y: 100,
     shape: 'circle',
+    type: 'table',
+    number_of_seats: 8,
   },
   {
     id: '3',
-    text: '3',
+    text: 'Indoor',
     x: 400,
     y: 400,
-    radius: 25,
-    shape: 'polygon',
+    width: 400,
+    height: 400,
+    shape: 'section',
   },
   {
     id: '4',
     text: 'Label',
-    height: 50,
-    width: 50,
+    height: 100,
+    width: 100,
     x: 500,
     y: 400,
     shape: 'label',
   },
   {
     id: '5',
-    height: 25,
-    width: 100,
+    height: 7,
+    width: 200,
     x: 500,
     y: 200,
     shape: 'barrier',
@@ -147,13 +157,23 @@ async function handleTransformEnd(e) {
   shape.x = e.target.x();
   shape.y = e.target.y();
 
-  shape.width = e.target.width() * e.target.scaleX();
-  shape.height = e.target.height() * e.target.scaleY();
+  shape.width = Math.max(e.target.width() * e.target.scaleX(), 30);
+  shape.height = Math.max(e.target.height() * e.target.scaleY(), 30);
   // reset scale to 1
   e.target.scaleX(1);
   e.target.scaleY(1);
 
   updateTransformer(true);
+}
+
+function handleDragStart(e, shape) {
+  // Store the initial position before the drag starts
+  dragAction.value = {
+    ...dragAction.value,
+    id: shape.id,
+    initialX: shape.x,
+    initialY: shape.y,
+  };
 }
 
 function onDragItem(type) {
@@ -162,19 +182,67 @@ function onDragItem(type) {
     text: type === 'label' ? 'Label' : tables.value.length + 1 + '',
     shape: type,
   };
-  if (type !== 'rectangle' && type !== 'label' && type !== 'barrier') {
+  if (type === 'circle') {
     attrs = { ...attrs, radius: 25 };
   } else if (type === 'rectangle' || type === 'label') {
     attrs = { ...attrs, width: 50, height: 50 };
   } else if (type === 'barrier') {
-    attrs = { ...attrs, width: 100, height: 25 };
+    attrs = { ...attrs, width: 100, height: 7, text: null };
+  } else if (type === 'section') {
+    attrs = {
+      ...attrs,
+      width: 200,
+      height: 200,
+      text:
+        'Section ' +
+        (tables.value.filter((shape) => shape.shape === 'section').length + 1),
+    };
   }
   dragAction.value = attrs;
 }
 
-function onDropItem(e, item) {
-  item.x = e.target.x();
-  item.y = e.target.y();
+function onDropItem(e, shape) {
+  console.log('drop item');
+  const stage = stageEl.value.getNode();
+  const newPos = stage.getPointerPosition();
+
+  // Check for overlaps with other shapes
+  const overlaps = checkForOverlap(newPos.x, newPos.y, shape);
+
+  if (overlaps) {
+    // Revert the position to the initial one if there is an overlap
+    shape.x = dragAction.value.initialX;
+    shape.y = dragAction.value.initialY;
+  } else {
+    // Otherwise, apply the new position
+    shape.x = newPos.x;
+    shape.y = newPos.y;
+  }
+}
+
+function checkForOverlap(newX, newY, shape) {
+  // Loop through all shapes and check if any of them overlap
+  for (let otherShape of tables.value) {
+    if (otherShape.id !== shape.id) {
+      const otherShapeBounds = itemRefs.value[
+        tables.value.indexOf(otherShape)
+      ].nodeRef
+        .getNode()
+        .getClientRect();
+
+      const isOverlap =
+        newX + shape.width > otherShapeBounds.x &&
+        newX < otherShapeBounds.x + otherShapeBounds.width &&
+        newY + shape.height > otherShapeBounds.y &&
+        newY < otherShapeBounds.y + otherShapeBounds.height;
+
+      if (isOverlap) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 function onZoom(e) {
@@ -217,6 +285,13 @@ function onZoom(e) {
       <button
         class="p-1 hover:bg-violet-100 rounded"
         draggable="true"
+        @dragstart="onDragItem('section')"
+      >
+        <LayoutTemplateIcon size="32" />
+      </button>
+      <button
+        class="p-1 hover:bg-violet-100 rounded"
+        draggable="true"
         @dragstart="onDragItem('rectangle')"
       >
         <Square size="32" />
@@ -227,13 +302,6 @@ function onZoom(e) {
         @dragstart="onDragItem('circle')"
       >
         <Circle size="32" />
-      </button>
-      <button
-        class="p-1 hover:bg-violet-100 rounded"
-        draggable="true"
-        @dragstart="onDragItem('polygon')"
-      >
-        <Diamond size="32" />
       </button>
       <button
         class="p-1 hover:bg-violet-100 rounded"
@@ -261,7 +329,7 @@ function onZoom(e) {
         v-model="selectedShape.text"
         class="rounded-md border px-2"
       />
-      <label
+      <!-- <label
         v-if="
           selectedShape.shape !== 'rectangle' &&
           selectedShape.shape !== 'label' &&
@@ -279,37 +347,35 @@ function onZoom(e) {
         >
           -
         </button></label
+      > -->
+      <label
+        >Width
+        <button
+          class="px-2 border-y border-x"
+          @click="selectedShape.width += 5"
+        >
+          +</button
+        ><button
+          class="px-2 border-y border-e"
+          @click="selectedShape.width -= 5"
+        >
+          -
+        </button></label
       >
-      <template v-else>
-        <label
-          >Width
-          <button
-            class="px-2 border-y border-x"
-            @click="selectedShape.width += 5"
-          >
-            +</button
-          ><button
-            class="px-2 border-y border-e"
-            @click="selectedShape.width -= 5"
-          >
-            -
-          </button></label
+      <label
+        >Height
+        <button
+          class="px-2 border-y border-x"
+          @click="selectedShape.height += 5"
         >
-        <label
-          >Height
-          <button
-            class="px-2 border-y border-x"
-            @click="selectedShape.height += 5"
-          >
-            +</button
-          ><button
-            class="px-2 border-y border-e"
-            @click="selectedShape.height -= 5"
-          >
-            -
-          </button></label
+          +</button
+        ><button
+          class="px-2 border-y border-e"
+          @click="selectedShape.height -= 5"
         >
-      </template>
+          -
+        </button></label
+      >
     </div>
   </div>
   <v-stage
@@ -320,20 +386,31 @@ function onZoom(e) {
     @wheel="onZoom"
   >
     <v-layer ref="layer-el">
-      <Shape
-        v-for="table of tables"
-        :key="table.id"
-        ref="items"
-        :config="table"
-        :selected="selectedShape?.id === table.id"
-        @transformend="handleTransformEnd"
-        @dragend="onDropItem"
-        @click="selectedShape = $event"
-      />
+      <template v-for="table of tables" :key="table.id">
+        <FloorSection
+          v-if="table.shape === 'section'"
+          ref="items"
+          :config="table"
+          :selected="selectedShape?.id === table.id"
+          @transformend="handleTransformEnd"
+          @dragend="onDropItem"
+          @click="selectedShape = $event"
+        />
+        <Shape
+          v-else
+          ref="items"
+          :config="table"
+          :selected="selectedShape?.id === table.id"
+          @transformend="handleTransformEnd"
+          @dragend="onDropItem"
+          @click="selectedShape = $event"
+          @dragstart="handleDragStart"
+        />
+      </template>
       <v-transformer
         ref="transformer"
         :config="{
-          rotateEnabled: false,
+          rotateEnabled: selectedShape?.shape === 'rectangle',
         }"
       />
     </v-layer>
