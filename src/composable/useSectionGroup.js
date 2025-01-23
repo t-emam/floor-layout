@@ -9,9 +9,11 @@ export const useSectionGroup = () => {
     // first children of the group contain the full width and height
     const groupBounds = group.children[0].getClientRect();
 
+    //loop on all sections group and skip the selected section
     for (let sectionGroup of sectionsList.value) {
       if (sectionGroup.attrs.id === group.attrs.id) continue;
 
+      // xOverlap and yOverlap hold the current section overlapping position
       const sectionBounds = sectionGroup.getClientRect();
       const xOverlap = groupBounds.x <= sectionBounds.x + sectionBounds.width && groupBounds.x + groupBounds.width >= sectionBounds.x;
       const yOverlap = groupBounds.y <= sectionBounds.y + sectionBounds.height && groupBounds.y + groupBounds.height >= sectionBounds.y;
@@ -24,6 +26,7 @@ export const useSectionGroup = () => {
 
   };
 
+  // check overlapping
   const checkOverlapping = (event, group, onOverlapCallback = null) => {
     group.moveToTop()
     return nextTick(() => {
@@ -74,19 +77,26 @@ export const useSectionGroup = () => {
 
     group.add(section);
     group.add(text);
-    group.on('dragstart', (event) => {
-      console.log(event.currentTarget.getPosition());
 
+    // save the start drag position
+    group.on('dragstart', (event) => {
       tempPosition.value = event.currentTarget.getPosition()
     });
-    group.on('dragend', (event) => checkOverlapping(event, group, ()=>{
-      console.log(group.getPosition(),tempPosition.value);
-      group.setPosition({
-        x: tempPosition.value.x,
-        y: tempPosition.value.y
-      })
-    }));
 
+    // on DragEnd check the overlapping and reset if its overlapped
+    group.on('dragend', async (event) => {
+      await checkOverlapping(event, group, ()=>{
+        group.setPosition({
+          x: tempPosition.value.x,
+          y: tempPosition.value.y
+        })
+      })
+
+      // reset the temp position
+      tempPosition.value = null
+    })
+
+    // save the start drag position
     sectionsList.value.push(group);
     return group;
   };
