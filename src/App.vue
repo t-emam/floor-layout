@@ -6,9 +6,12 @@ import {
   LayoutTemplateIcon,
   Square,
   SquareDashed,
+  AppWindowMac,
 } from 'lucide-vue-next';
+import {useSectionGroup} from './composable/useSectionGroup.js';
 import Shape from './components/Shape.vue';
 import FloorSection from './components/Section.vue';
+const {buildSection, checkOverlapping, sectionsList} = useSectionGroup();
 
 const configKonva = {
   width: window.innerWidth,
@@ -148,6 +151,7 @@ onMounted(() => {
 });
 
 function isOverlapping(newItem, existingItems) {
+  return;
   return existingItems.some((item) => {
     // Calculate bounding boxes for new and existing items
     const newItemBounds = {
@@ -263,12 +267,29 @@ function handleDragStart(e, shape) {
   // };
 }
 
-function onDragItem(type) {
+function onDragItem(type, event) {
+  if(type==='floor_section') {
+    return nextTick(() => {
+      const section = buildSection(event)
+      layerEl.value.getNode().add(section);
+      layerEl.value.getNode().batchDraw();
+
+      checkOverlapping(event, section, ()=> {
+        section.getStage().container().style.cursor = 'auto';
+        const index = sectionsList.value.findIndex(item=>item.attrs.id ===section.attrs.id);
+        sectionsList.value.splice(index, 1);
+        section.remove()
+      })
+    })
+  }
   let attrs = {
     id: tables.value.length + 1 + '',
     text: type === 'label' ? 'Label' : tables.value.length + 1 + '',
     shape: type,
   };
+  if(type === 'circle' || type === 'rectangle'){
+    attrs.name = 'table'
+  }
   if (type === 'circle' || type === 'rectangle' || type === 'label') {
     attrs = { ...attrs, width: 50, height: 50 };
   } else if (type === 'barrier') {
@@ -276,6 +297,7 @@ function onDragItem(type) {
   } else if (type === 'section') {
     attrs = {
       ...attrs,
+      name: 'section',
       width: 200,
       height: 200,
       text:
@@ -328,6 +350,14 @@ function onZoom(e) {
     <div
       class="flex justify-center items-center gap-3 py-2 px-3 w-fit mx-auto border shadow-lg rounded-lg"
     >
+      <button
+          class="p-1 hover:bg-violet-100 rounded"
+          draggable="true"
+          @dragend="onDragItem('floor_section', $event)"
+      >
+        <AppWindowMac size="32" />
+      </button>
+
       <button
         class="p-1 hover:bg-violet-100 rounded"
         draggable="true"
