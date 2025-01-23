@@ -82,15 +82,10 @@ onMounted(() => {
 
   con.addEventListener('dragover', (e) => {
     e.preventDefault();
-  });
-  con.addEventListener('drop', (e) => {
-    e.preventDefault();
     stageNode.setPointersPositions(e);
 
     const pointerPosition = stageNode.getPointerPosition(e);
-
     if (pointerPosition) {
-      // Account for stage scale and position
       const scaleX = stageNode.scaleX();
       const scaleY = stageNode.scaleY();
       const stagePosition = stageNode.position();
@@ -100,15 +95,86 @@ onMounted(() => {
         y: (pointerPosition.y - stagePosition.y) / scaleY,
       };
 
-      tables.value.push({
+      const newItem = {
         ...dragAction.value,
         ...adjustedPosition,
-      });
+      };
 
-      dragAction.value = null;
+      // Check for overlap
+      const isOverlappingItem = isOverlapping(newItem, tables.value);
+      // Change cursor
+      const container = stageNode.container();
+      container.style.cursor = isOverlappingItem ? 'not-allowed' : 'default';
     }
   });
+  con.addEventListener('drop', (e) => {
+    e.preventDefault();
+    stageNode.setPointersPositions(e);
+
+    const pointerPosition = stageNode.getPointerPosition(e);
+
+    if (pointerPosition) {
+      const scaleX = stageNode.scaleX();
+      const scaleY = stageNode.scaleY();
+      const stagePosition = stageNode.position();
+
+      const adjustedPosition = {
+        x: (pointerPosition.x - stagePosition.x) / scaleX,
+        y: (pointerPosition.y - stagePosition.y) / scaleY,
+      };
+
+      const newItem = {
+        ...dragAction.value,
+        ...adjustedPosition,
+      };
+
+      // Check for overlaps before adding
+      if (!isOverlapping(newItem, tables.value)) {
+        tables.value.push(newItem);
+        dragAction.value = null;
+      } else {
+        console.warn(
+          'The item overlaps with an existing shape and cannot be placed.'
+        );
+      }
+    }
+
+    con.style.cursor = 'default';
+  });
+  con.addEventListener('dragleave', () => {
+    // Reset cursor when leaving the canvas area
+    con.style.cursor = 'default';
+  });
 });
+
+function isOverlapping(newItem, existingItems) {
+  return existingItems.some((item) => {
+    // Calculate bounding boxes for new and existing items
+    const newItemBounds = {
+      left: newItem.x,
+      right: newItem.x + newItem.width,
+      top: newItem.y,
+      bottom: newItem.y + newItem.height,
+    };
+
+    const existingItemBounds = {
+      left: item.x,
+      right: item.x + item.width,
+      top: item.y,
+      bottom: item.y + item.height,
+    };
+
+    // Check if bounding boxes overlap
+    const isOverlappingHorizontally =
+      newItemBounds.left < existingItemBounds.right &&
+      newItemBounds.right > existingItemBounds.left;
+    const isOverlappingVertically =
+      newItemBounds.top < existingItemBounds.bottom &&
+      newItemBounds.bottom > existingItemBounds.top;
+
+    return isOverlappingHorizontally && isOverlappingVertically;
+  });
+}
 
 function handleStageMouseDown(e) {
   // clicked on stage - clear selection
@@ -188,7 +254,6 @@ async function handleTransformEnd(e) {
 }
 
 function handleDragStart(e, shape) {
-  e.target.moveToTop();
   // Store the initial position before the drag starts
   // dragAction.value = {
   //   ...dragAction.value,
