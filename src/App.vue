@@ -1,4 +1,6 @@
 <script setup>
+import Konva from "konva";
+import {useTable} from "./composable/useTable.js";
 import { nextTick, ref, useTemplateRef } from 'vue';
 import { onMounted } from 'vue';
 import {
@@ -7,11 +9,13 @@ import {
   Square,
   SquareDashed,
   AppWindowMac,
+  Table2
 } from 'lucide-vue-next';
 import {useSectionGroup} from './composable/useSectionGroup.js';
 import Shape from './components/Shape.vue';
 import FloorSection from './components/Section.vue';
-const {buildSection, checkOverlapping, sectionsList} = useSectionGroup();
+const {buildSection, checkOverlapping, checkTableUnderSection, sectionsList} = useSectionGroup();
+const {buildTable, tablesList} = useTable();
 
 const configKonva = {
   width: window.innerWidth,
@@ -20,56 +24,56 @@ const configKonva = {
 };
 
 const tables = ref([
-  {
-    id: '1',
-    text: '1',
-    height: 50,
-    width: 50,
-    x: 500,
-    y: 300,
-    shape: 'rectangle',
-    type: 'table',
-    table_id: '',
-    number_of_seats: 4,
-  },
-  {
-    id: '2',
-    text: '2',
-    active: true,
-    width: 50,
-    height: 50,
-    x: 450,
-    y: 300,
-    shape: 'circle',
-    type: 'table',
-    number_of_seats: 8,
-  },
-  {
-    id: '3',
-    text: 'Indoor',
-    x: 400,
-    y: 250,
-    width: 400,
-    height: 400,
-    shape: 'section',
-  },
-  {
-    id: '4',
-    text: 'Label',
-    height: 100,
-    width: 100,
-    x: 500,
-    y: 400,
-    shape: 'label',
-  },
-  {
-    id: '5',
-    height: 7,
-    width: 200,
-    x: 500,
-    y: 200,
-    shape: 'barrier',
-  },
+  // {
+  //   id: '1',
+  //   text: '1',
+  //   height: 50,
+  //   width: 50,
+  //   x: 500,
+  //   y: 300,
+  //   shape: 'rectangle',
+  //   type: 'table',
+  //   table_id: '',
+  //   number_of_seats: 4,
+  // },
+  // {
+  //   id: '2',
+  //   text: '2',
+  //   active: true,
+  //   width: 50,
+  //   height: 50,
+  //   x: 450,
+  //   y: 300,
+  //   shape: 'circle',
+  //   type: 'table',
+  //   number_of_seats: 8,
+  // },
+  // {
+  //   id: '3',
+  //   text: 'Indoor',
+  //   x: 400,
+  //   y: 250,
+  //   width: 400,
+  //   height: 400,
+  //   shape: 'section',
+  // },
+  // {
+  //   id: '4',
+  //   text: 'Label',
+  //   height: 100,
+  //   width: 100,
+  //   x: 500,
+  //   y: 400,
+  //   shape: 'label',
+  // },
+  // {
+  //   id: '5',
+  //   height: 7,
+  //   width: 200,
+  //   x: 500,
+  //   y: 200,
+  //   shape: 'barrier',
+  // },
 ]);
 
 const stageEl = useTemplateRef('stage-el');
@@ -149,6 +153,22 @@ onMounted(() => {
     con.style.cursor = 'default';
   });
 });
+
+const checkTableOverlappingTable = (table, onOverlapping = null, onNotOverlapping = null)=> {
+  const tableBounds = table.children[0].getClientRect();
+  for(let item of Object.values(tablesList.value)) {
+    if(item.id() === table.id()) {continue;}
+    const bounds = item.children[0].getClientRect();
+    const xIn = tableBounds.x <= bounds.x + bounds.width && tableBounds.x + tableBounds.width >= bounds.x;
+    const yIn = tableBounds.y <= bounds.y + bounds.height && tableBounds.y + tableBounds.height >= bounds.y;
+
+    if (xIn && yIn) {
+      console.log('yes over tableBounds',tableBounds, item.id())
+      return onOverlapping && onOverlapping(item)
+    }
+  }
+  return onNotOverlapping && onNotOverlapping()
+}
 
 function isOverlapping(newItem, existingItems) {
   return;
@@ -282,6 +302,65 @@ function onDragItem(type, event) {
       })
     })
   }
+
+  if (type === 'table_section') {
+    return nextTick(() => {
+      const table = buildTable(event)
+      checkTableUnderSection(event, table, (section) => {
+        table.setPosition({x:20, y:20});
+        section.add(table)
+        section.clearCache(); // this solved the table hidden under the section
+        section.getLayer().batchDraw();
+
+        console.log('dragstart', table.table_id);
+
+        checkTableOverlappingTable(table,()=>{
+          table.children[0].fill('red');
+          console.log('In table.children[0]',table.children[0])
+        }, ()=>{
+          table.children[0].fill('#fff');
+          console.log('Not table.children[0]',table.children[0])
+        });
+
+        // save the start drag position
+        table.on('dragstart', (event) => {
+          table.moveToTop()
+          // tempPosition.value = event.currentTarget.getPosition()
+        });
+
+        // on DragEnd check the overlapping and reset if its overlapped
+        table.on('dragend', async (event) => {
+          await checkTableUnderSection(event, table,
+              (section) => {
+                console.log('table parent id', section.id());
+                console.log('table parent id', table.parent.id());
+
+                if (section.id() !== table.parent.id()) {
+                  section.add(table);
+                  table.setPosition({x:20, y:20});
+                  section.clearCache();
+                  // set the section as the table parent
+                }
+
+                const temp = table.findOne(`#${ table.attrs.table_id }`);
+                temp.fill('#fff');
+
+                checkTableOverlappingTable(table,()=>{
+                  table.children[0].fill('red');
+                  console.log('In table.children[0]',table.children[0])
+                }, ()=>{
+                  table.children[0].fill('#fff');
+                  console.log('Not table.children[0]',table.children[0])
+                });
+              },
+              () => {
+                const temp = table.findOne(`#${ table.attrs.table_id }`);
+                temp.fill('red');
+              })
+        })
+      })
+    })
+  }
   let attrs = {
     id: tables.value.length + 1 + '',
     text: type === 'label' ? 'Label' : tables.value.length + 1 + '',
@@ -350,6 +429,14 @@ function onZoom(e) {
     <div
       class="flex justify-center items-center gap-3 py-2 px-3 w-fit mx-auto border shadow-lg rounded-lg"
     >
+      <button
+          class="p-1 hover:bg-violet-100 rounded"
+          draggable="true"
+          @dragend="onDragItem('table_section', $event)"
+      >
+        <Table2 size="32" />
+      </button>
+
       <button
           class="p-1 hover:bg-violet-100 rounded"
           draggable="true"

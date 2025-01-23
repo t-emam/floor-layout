@@ -36,13 +36,44 @@ export const useSectionGroup = () => {
           onOverlapCallback();
         }
       } else {
-        group.getStage().container().style.cursor = 'move';
+        group.getStage().container().style.cursor = 'auto';
       }
       if (!!group?.getLayer()) {
         group.cache();
         group.getLayer().batchDraw();
       }
 
+    })
+  }
+
+  // in section
+  const isOnSection = (table)=>{
+    // first children of the group contain the full width and height
+    const tableBounds = table.children[0].getClientRect();
+    console.log('SelectedList',  sectionsList.value)
+
+    for (let section of [...sectionsList.value]) {
+      const bounds = section.children[0].getClientRect();
+      const xIn = tableBounds.x <= bounds.x + bounds.width && tableBounds.x + tableBounds.width >= bounds.x;
+      const yIn = tableBounds.y <= bounds.y + bounds.height && tableBounds.y + tableBounds.height >= bounds.y;
+
+      if (xIn && yIn) {
+        console.log('yes over section',section, section.id())
+        return section;
+      }
+    }
+  }
+
+
+  const checkTableUnderSection = (event, table, onOverCallback = null, onOutCallback = null) => {
+    table.moveToTop()
+    return nextTick(() => {
+      const selectedSection = isOnSection(table);
+      if (selectedSection) {
+        onOverCallback && onOverCallback(selectedSection);
+      } else {
+        onOutCallback && onOutCallback()
+      }
     })
   }
 
@@ -57,18 +88,18 @@ export const useSectionGroup = () => {
     });
 
     const section = new Konva.Rect({
-      width: 450,
-      height: 220,
+      width: 550,
+      height: 550,
       fill: '#fff',
       stroke: '#ccc',
       strokeWidth: 1,
     });
 
     const text = new Konva.Text({
-      x: 30,
-      y: 20,
-      text: 'Section Name Here',
-      fontSize: 22,
+      x: 0,
+      y: -20,
+      text: `Section ${1+sectionsList.value.length}`,
+      fontSize: 16,
       fontFamily: 'Roboto',
       fill: 'black',
       align: 'center',
@@ -85,7 +116,7 @@ export const useSectionGroup = () => {
 
     // on DragEnd check the overlapping and reset if its overlapped
     group.on('dragend', async (event) => {
-      await checkOverlapping(event, group, ()=>{
+      await checkOverlapping(event, group, () => {
         group.setPosition({
           x: tempPosition.value.x,
           y: tempPosition.value.y
@@ -104,6 +135,7 @@ export const useSectionGroup = () => {
   return {
     buildSection,
     sectionsList,
-    checkOverlapping
+    checkOverlapping,
+    checkTableUnderSection
   };
 };
