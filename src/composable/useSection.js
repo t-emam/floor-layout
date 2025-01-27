@@ -1,4 +1,5 @@
 import Konva from 'konva';
+import {useTransformer} from "../composable/useTransformer.js";
 import {ShapeStore} from "../Store/ShapeStore.js";
 import {ref} from 'vue';
 
@@ -6,7 +7,7 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
   const tempPosition = ref(null);
 
   /**
-   * Handle on Section Drag Start
+   * Handle on Section Drag Start event listener
    * @param event
    * @param section
    */
@@ -16,12 +17,15 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
   }
 
   /**
-   * Handle on Section Drag End
+   * Handle on Section Drag End event listener
    * @param event
    * @param section
    */
   const onSectionDragEnd = (event, section) => {
     event?.evt?.preventDefault()
+    if(event.target.id() !==section.id()){
+      return event?.evt.stopPropagation();
+    }
     const overlappingItem = ShapeStore.shapeOverlapping(section, 'sections')
 
     if (!overlappingItem || section?.id() === overlappingItem?.id()) {
@@ -42,7 +46,11 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
     }
   }
 
-  // Build section (group + rectangle + text)
+  /**
+   * Build Section Handler
+   * @param attrs
+   * @returns {any}
+   */
   const buildSection = (attrs) => {
     const group = new Konva.Group({
       id: attrs.id,
@@ -50,16 +58,17 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
       y: attrs?.y,
       width: attrs.width,
       height: attrs.height,
+      shape: attrs.shape,
       name: attrs.name,
       type: attrs.type,
-      draggable: true,
+      draggable: false,
     });
 
     const section = new Konva.Rect({
       id: `section-${ attrs.id }`,
       width: attrs.width,
       height: attrs.height,
-      fill: '#fff',
+      // fill: '#fff',
       stroke: '#ccc',
       strokeWidth: 1,
     });
@@ -67,13 +76,16 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
     const text = new Konva.Text({
       id: `text-${ attrs.id }`,
       x: 0,
-      y: -20,
+      y: -26,
       text: attrs.name,
       fontSize: 16,
       fontFamily: 'Roboto',
       fill: 'black',
       align: 'center',
       verticalAlign: 'middle',
+      strokeWidth:1,
+      stroke: 'black',
+      dont_validate: false
     });
 
     group.add(section);
@@ -90,16 +102,14 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
       group.rotate(attrs.rotation);
     }
 
-    ShapeStore.setShape('sections', group);
 
-    // transform
-    const transform = new Konva.Transformer();
-    transform.nodes([section]);
-    layerEl.value.getNode().add(transform);
-
+    // const {buildTransform} = useTransformer();
+    // buildTransform(group);
 
     layerEl.value.getNode().add(group);
     layerEl.value.getNode().batchDraw();
+
+    ShapeStore.setShape('sections', group);
     return group;
   };
 

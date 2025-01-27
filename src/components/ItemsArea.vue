@@ -17,51 +17,35 @@ const onDragItem = (item, event) => {
       <button
           class="p-1 hover:bg-violet-100 rounded"
           draggable="true"
-          @dragend="onDragItem('table_section', $event)"
-      >
-        <Table2 size="32"/>
-      </button>
-
-      <button
-          class="p-1 hover:bg-violet-100 rounded"
-          draggable="true"
-          @dragend="onDragItem('floor_section', $event)"
-      >
-        <AppWindowMac size="32"/>
-      </button>
-
-      <button
-          class="p-1 hover:bg-violet-100 rounded"
-          draggable="true"
-          @dragstart="onDragItem('section')"
+          @dragend="onDragItem('section', $event)"
       >
         <LayoutTemplateIcon size="32"/>
       </button>
       <button
           class="p-1 hover:bg-violet-100 rounded"
           draggable="true"
-          @dragstart="onDragItem('rectangle')"
+          @dragend="onDragItem('rectangle', $event)"
       >
         <Square size="32"/>
       </button>
       <button
           class="p-1 hover:bg-violet-100 rounded"
           draggable="true"
-          @dragstart="onDragItem('circle')"
+          @dragend="onDragItem('circle', $event)"
       >
         <Circle size="32"/>
       </button>
       <button
           class="p-1 hover:bg-violet-100 rounded"
           draggable="true"
-          @dragstart="onDragItem('label')"
+          @dragend="onDragItem('label', $event)"
       >
         <SquareDashed size="32"/>
       </button>
       <button
           class="p-1 hover:bg-violet-100 rounded h-10"
           draggable="true"
-          @dragstart="onDragItem('barrier')"
+          @dragend="onDragItem('barrier', $event)"
       >
         <div class="h-2 w-8 bg-black"></div>
       </button>

@@ -1,4 +1,5 @@
 import Konva from "konva";
+import {useTransformer} from "../composable/useTransformer.js";
 import {ShapeStore} from "../Store/ShapeStore.js";
 import {ref} from "vue";
 
@@ -6,22 +7,35 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
 
   const tempPosition = ref(null);
 
+  /**
+   * Handle on Label Drag Start event listener
+   * @param event
+   * @param label
+   */
   const onLabelDragStart = (event, label) => {
     tempPosition.value = event.currentTarget.getPosition()
     label.moveToTop();
   }
 
+  /**
+   * Handle on Label Drag End event listener
+   * @param event
+   * @param label
+   * @returns {Promise<*>}
+   */
   const onLabelDragEnd = async (event, label) => {
-    event.evt.preventDefault();
+    event?.evt?.preventDefault();
     label.children[0].fill(label.attrs.defaultFill);
+
+    console.log('is new label', label.attrs?.is_new)
 
     // overlapping section
     const sectionOverlapping = ShapeStore.shapeOverlapping(label, 'sections');
     if (!sectionOverlapping && !!label.parent?.id()) { // destroy o return to the previous position
       return !tempPosition?.value ? label.destroy() : label.setPosition(tempPosition.value);
-    }
-
-    if (sectionOverlapping.id() !== label.parent.id() && !!label.parent?.id()) {
+    }else if(!label.parent?.id() && sectionOverlapping?.id() && !label.attrs?.is_new){
+      return label.setPosition(tempPosition.value);
+    }else if (sectionOverlapping?.id() !== label.parent?.id()) {
       const {x: sectionX, y: sectionY} = sectionOverlapping.getPosition();
       const {x: eventX, y: eventY} = event.evt
       ShapeStore.setSectionChild(label, sectionOverlapping.id());
@@ -32,11 +46,9 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
     }
 
     // overlapping label
-    const tableOverlapping = ShapeStore.shapeOverlapping(label, 'tables');
-    const barrierOverlapping = ShapeStore.shapeOverlapping(label, 'barriers');
-    const labelOverlapping = ShapeStore.shapeOverlapping(label, 'labels');
+    const othersOverlapping = ShapeStore.shapeOverlapping(label, 'others');
 
-    if (tableOverlapping || barrierOverlapping || (labelOverlapping.id() !== label.id())) {
+    if (!!othersOverlapping) {
       label.children[0].fill('red');
       return
     }
@@ -44,6 +56,11 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
     ShapeStore.addOrEdit(label, 'labels');
   }
 
+  /**
+   * Build Label Handler
+   * @param attrs
+   * @returns {any}
+   */
   const buildLabel = (attrs) => {
     const group = new Konva.Group({
       id: attrs.id,
@@ -51,6 +68,7 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
       y: attrs?.y,
       name: attrs.name,
       type: attrs.type,
+      shape: attrs.shape,
       width: attrs.width,
       height: attrs.height,
       parent_id: attrs.parent_id,
@@ -91,17 +109,13 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
     group.on('dragstart', (event) => onLabelDragStart(event, group))
     group.on('dragend', (event) => onLabelDragEnd(event, group))
 
-    // save the start drag position
-    ShapeStore.setShape('labels', group);
-
-
-    // transform
-    const transform = new Konva.Transformer();
-    transform.nodes([group]);
-    layerEl.value.getNode().add(transform);
+    const {buildTransform} = useTransformer();
+    buildTransform(group);
 
     layerEl.value.getNode().add(group);
     layerEl.value.getNode().batchDraw();
+
+    ShapeStore.setShape('labels', group);
     return group;
   };
 

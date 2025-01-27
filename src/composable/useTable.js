@@ -1,62 +1,84 @@
 import Konva from 'konva';
-import {ref} from "vue";
+import {useTransformer} from "../composable/useTransformer.js";
+import {nextTick, ref} from "vue";
 import {ShapeStore} from '../Store/ShapeStore.js';
 
 export const useTable = ({setCursor, stageEl, layerEl}) => {
 
-  const tempPosition = ref(null)
-  const transform = ref(null)
+  const tempPosition = ref(null);
 
-  const onTableTransformStart = () => {
-  }
-
-  const onTableTransformEnd = () => {
-  }
-
-
+  /**
+   * Handle on Table Drag Start event listener
+   * @param event
+   * @param table
+   */
   const onTableDragStart = (event, table) => {
-    tempPosition.value = event.currentTarget.getPosition()
+    tempPosition.value = event.currentTarget.getPosition();
     table.moveToTop();
-    transform.value.moveToTop()
   }
 
+  /**
+   * Handle on Table Drag End event listener
+   * @param event
+   * @param table
+   * @returns {Promise<*>}
+   */
   const onTableDragEnd = async (event, table) => {
-    event.evt.preventDefault();
-    table.children[0].fill('#fff');
+    event?.evt?.preventDefault();
+    table.moveToTop();
+    table.findOne('.table').fill('#fff');
 
     // overlapping section
     const sectionOverlapping = ShapeStore.shapeOverlapping(table, 'sections');
     if (!sectionOverlapping) { // destroy o return to the previous position
-      return !tempPosition?.value ? ShapeStore.destroyShape(table, 'tables') : table.setPosition(tempPosition.value);
+      if (table.attrs?.is_new) {
+        return ShapeStore.destroyShape(table, 'tables')
+      }
+
+      return nextTick(() => {
+        table.setPosition(tempPosition.value);
+        table.moveToTop();
+      })
     }
 
-    if (sectionOverlapping.id() !== table.parent.id()) {
+    if (!!sectionOverlapping && sectionOverlapping.id() !== table.parent.id()) {
       const {x: sectionX, y: sectionY} = sectionOverlapping.getPosition();
-      const {x: eventX, y: eventY} = event.evt
+      const {layerX: eventX, layerY: eventY} = event.evt
+      sectionOverlapping.add(table);
       ShapeStore.setSectionChild(table, sectionOverlapping.id());
 
-      const offsetX = eventX - sectionX - table.getWidth() / 2;
-      const offsetY = eventY - sectionY - table.getHeight() / 2;
-      table.setPosition({x: offsetX, y: offsetY});
+      await nextTick(()=>{
+        const offsetX = eventX - sectionX - table.getWidth() / 2;
+        const offsetY = eventY - sectionY - table.getHeight() / 2;
+        table.setPosition({x: offsetX, y: offsetY});
+        if(table.parent.id() === sectionOverlapping.id()) {
+          table.parent.moveToBottom()
+          table.parent.getLayer()?.batchDraw();
+          table.parent.clearCache();
+        }
+      })
     }
 
-    // overlapping table
-    const tableOverlapping = ShapeStore.shapeOverlapping(table, 'tables');
-    const barrierOverlapping = ShapeStore.shapeOverlapping(table, 'barriers');
-    const labelOverlapping = ShapeStore.shapeOverlapping(table, 'labels');
+    const othersTable = ShapeStore.shapeOverlapping(table, 'others');
 
-    if (tableOverlapping && tableOverlapping?.id() !== table?.id() ||
-      barrierOverlapping ||
-      labelOverlapping
-    ) {
-      table.children[0].fill('red');
+    if (!!othersTable) {
+      table.findOne('.table').fill('red');
       return
     }
 
+    delete table.attrs.is_new;
     table.getLayer()?.batchDraw();
     ShapeStore.addOrEdit(table, 'tables');
+    return nextTick(() => {
+      table.moveToTop();
+    })
   }
 
+  /**
+   * Build Table Shape handler
+   * @param attrs
+   * @returns {any}
+   */
   const buildTable = (attrs) => {
     const group = new Konva.Group({
       id: attrs.id,
@@ -65,9 +87,11 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       width: attrs.width,
       height: attrs.height,
       type: attrs.type,
+      shape: attrs.shape,
       parent_id: attrs.parent_id,
       name: 'table-group',
       draggable: true,
+      number_of_seats: attrs.number_of_seats
     });
 
     let table = null;
@@ -78,6 +102,7 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       fill: '#fff',
       stroke: '#ccc',
       strokeWidth: 1,
+      name: 'table'
     }
 
     if (attrs.shape === 'circle') {
@@ -112,28 +137,23 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
     group.add(table);
     group.add(text);
 
-    group.on('transformstart', (event) => onTableTransformStart(event, group));
-    group.on('transformend', (event) => onTableTransformEnd(event, group));
-
     group.on('dragstart', (event) => onTableDragStart(event, group))
     group.on('dragend', (event) => onTableDragEnd(event, group))
+    // group.on('transformend', (event) => onTableDragEnd(event, group))
 
-    ShapeStore.setShape('tables', group);
-
-
-    // transform
-    transform.value = new Konva.Transformer();
-    transform.value.nodes([group]);
-    layerEl.value.getNode().add(transform.value);
+    const {buildTransform} = useTransformer();
+    buildTransform(group);
 
     layerEl.value.getNode().add(group);
     layerEl.value.getNode().batchDraw();
+
+    ShapeStore.setShape('tables', group);
     return group;
   };
 
   return {
     buildTable,
     onTableDragStart,
-    onTableDragEnd
+    onTableDragEnd,
   };
 };

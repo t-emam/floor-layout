@@ -1,18 +1,29 @@
 import Konva from "konva";
+import {useTransformer} from "../composable/useTransformer.js";
 import {ShapeStore} from "../Store/ShapeStore.js";
 import {ref} from "vue";
 
 export const useBarrier = ({setCursor, stageEl, layerEl}) => {
-  const barriersList = ref([]);
   const tempPosition = ref(null);
 
+  /**
+   * Handle on Barrier Drag Start event listener
+   * @param event
+   * @param barrier
+   */
   const onBarrierDragStart = (event, barrier) => {
     tempPosition.value = event.currentTarget.getPosition()
     barrier.moveToTop();
   }
 
+  /**
+   * Handle on Barrier Drag End event listener
+   * @param event
+   * @param barrier
+   * @returns {Promise<*>}
+   */
   const onBarrierDragEnd = async (event, barrier) => {
-    event.evt.preventDefault();
+    event?.evt?.preventDefault();
     barrier.fill(barrier.attrs.defaultFill);
 
     // overlapping section
@@ -32,11 +43,9 @@ export const useBarrier = ({setCursor, stageEl, layerEl}) => {
     }
 
     // overlapping barrier
-    const tableOverlapping = ShapeStore.shapeOverlapping(barrier, 'tables');
-    const barrierOverlapping = ShapeStore.shapeOverlapping(barrier, 'barriers');
-    const labelOverlapping = ShapeStore.shapeOverlapping(barrier, 'labels');
+    const othersOverlapping = ShapeStore.shapeOverlapping(barrier, 'others');
 
-    if (tableOverlapping || labelOverlapping || (barrierOverlapping && barrierOverlapping.id() !== barrier.id())) {
+    if (!!othersOverlapping) {
       barrier.fill('red');
       return;
     }
@@ -44,12 +53,18 @@ export const useBarrier = ({setCursor, stageEl, layerEl}) => {
     ShapeStore.addOrEdit(barrier, 'barriers');
   }
 
+  /**
+   * Build Barrier Handler
+   * @param attrs
+   * @returns {Rect}
+   */
   const buildBarrier = (attrs) => {
     const barrier = new Konva.Rect({
       id: attrs.id,
       width: attrs.width,
       height: attrs.height,
       fill: attrs.bg_color,
+      shape: attrs.shape,
       defaultFill: attrs.bg_color,
       x: attrs?.x,
       y: attrs?.y,
@@ -64,24 +79,23 @@ export const useBarrier = ({setCursor, stageEl, layerEl}) => {
     barrier.on('dragstart', (event) => onBarrierDragStart(event, barrier));
     barrier.on('dragend', (event) => onBarrierDragEnd(event, barrier));
 
+
     if (attrs?.rotation) {
       barrier.rotate(attrs.rotation);
     }
 
-    ShapeStore.setShape('barriers', barrier);
-
-    // transform
-    const transform = new Konva.Transformer();
-    transform.nodes([barrier]);
-    layerEl.value.getNode().add(transform);
+    const {buildTransform} = useTransformer();
+    buildTransform(barrier);
 
     layerEl.value.getNode().add(barrier);
     layerEl.value.getNode().batchDraw();
+
+    ShapeStore.setShape('barriers', barrier);
     return barrier;
   };
 
   return {
     buildBarrier,
-    barriersList
+    onBarrierDragEnd
   }
 }
