@@ -1,18 +1,22 @@
 import Konva from "konva";
+import {useSection} from "./useSection.js";
 import {ref} from "vue";
 import {ShapeStore} from "../Store/ShapeStore.js";
-
+const {resetTransform} = useSection({});
 export const useTransformer = () => {
 
   const transform = ref(null);
 
   const resetAllTransforms = ()=> {
-
     const allTransformers = ShapeStore.layerEl.getNode().getChildren().filter(child => child instanceof Konva.Transformer);
     allTransformers.forEach(transformer => {
       if (transformer) {
-        transformer.hide();
-        transformer.nodes([]);
+        if(transformer.attrs?.is_section){
+          resetTransform(transformer.parent?.children?.[0], 0);
+        }else{
+          transformer.hide();
+          transformer.nodes([]);
+        }
         ShapeStore.layerEl.getNode().batchDraw();
       }
     });

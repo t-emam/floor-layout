@@ -92,11 +92,11 @@ function onDragItem(type, event) {
     const labelLength = label.length;
 
     const attrs = {
-      id: `_NEW_${ new Date().getTime() }`,
-      x: event.offsetX - 150,
-      y: event.offsetY,
-      width: 300,
-      height: 400,
+      id: `_NEW_${ new Date().getTime().toString() }`,
+      x: event.clientX,
+      y: event.clientY,
+      width: 200,
+      height: 200,
       type: "section",
       name: `Section ${ label.substring(labelLength - 4, labelLength) }`,
       rotation: 0,

@@ -1,9 +1,8 @@
 import Konva from 'konva';
-import {useTransformer} from "../composable/useTransformer.js";
 import {ShapeStore} from "../Store/ShapeStore.js";
 import {ref} from 'vue';
 
-export const useSection = ({setCursor, stageEl, layerEl}) => {
+export const useSection = ({setCursor= null}) => {
   const tempPosition = ref(null);
 
   /**
@@ -23,27 +22,71 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
    */
   const onSectionDragEnd = (event, section) => {
     event?.evt?.preventDefault()
-    if(event.target.id() !==section.id()){
+
+    if (event?.target instanceof Konva.Group && event?.target?.id() !== section?.id()) {
       return event?.evt.stopPropagation();
     }
-    const overlappingItem = ShapeStore.shapeOverlapping(section, 'sections')
+    const otherSections = ShapeStore.shapeOverlapping(section, 'sections')
+    let others = ShapeStore.shapeOverlapping(section, 'others');
 
-    if (!overlappingItem || section?.id() === overlappingItem?.id()) {
+    resetTransform(section);
+
+    if (!otherSections && !others) {
       return ShapeStore.addOrEdit(section, 'sections')
     }
 
-    if (overlappingItem.attrs.type === 'section') {
-      setCursor('not-allowed');
-      !tempPosition?.value
-        ? ShapeStore.destroyShape(section, 'sections')
-        : section.setPosition({...tempPosition.value})
-
-      setTimeout(() => {
-        setCursor('auto');
-      }, 1000);
-
-      return overlappingItem
+    setCursor('not-allowed');
+    if(!tempPosition?.value){
+      ShapeStore.destroyShape(section, 'sections')
+    } else {
+      section.setPosition({...tempPosition.value})
     }
+
+    setTimeout(() => {
+      setCursor('auto');
+    }, 1000);
+
+    return others || otherSections
+  }
+
+
+  /**
+   * On Section doubleClick enable Transform
+   * @param event
+   * @param section
+   */
+  const onSectionDoubleClick = (event, section) => {
+    event.evt.stopPropagation();
+    section.draggable(true);
+    section.transform.visible();
+    section.transform.nodes([section]);
+    section.transform.attrs['is_section'] = true;
+    section.getLayer().add(section.transform);
+    section.getLayer().batchDraw();
+  }
+
+  /**
+   * Reset Transform and Disable Dragging
+   * @param section
+   * @param timeout
+   */
+  const resetTransform = (section, timeout = 5000) =>{
+    // TODO: lodash Debounce
+    setTimeout(() => {
+      section.draggable(false);
+      section.transform.nodes([]);
+    }, timeout)
+  }
+
+  /**
+   * On End Transform
+   * @param event
+   * @param section
+   */
+  const onSectionTransformEnd = (event, section) => {
+    event.evt.stopPropagation();
+    resetTransform(section)
+    onSectionDragEnd(event, section);
   }
 
   /**
@@ -53,7 +96,7 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
    */
   const buildSection = (attrs) => {
     const group = new Konva.Group({
-      id: attrs.id,
+      id: `${attrs.id}`,
       x: attrs?.x,
       y: attrs?.y,
       width: attrs.width,
@@ -68,7 +111,7 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
       id: `section-${ attrs.id }`,
       width: attrs.width,
       height: attrs.height,
-      // fill: '#fff',
+      fill: '#fff',
       stroke: '#ccc',
       strokeWidth: 1,
     });
@@ -83,9 +126,9 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
       fill: 'black',
       align: 'center',
       verticalAlign: 'middle',
-      strokeWidth:1,
+      strokeWidth: 1,
       stroke: 'black',
-      dont_validate: false
+      name:'text'
     });
 
     group.add(section);
@@ -95,6 +138,14 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
       group.rotate(attrs.rotation);
     }
 
+    group['transform'] = new Konva.Transformer({
+      enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+      rotateLineVisible: true,
+    });
+
+    group.on('dblclick', event => onSectionDoubleClick(event, group));
+    group.on('transformend', (event) => onSectionTransformEnd(event, group));
+
     group.on('dragstart', (event) => onSectionDragStart(event, group));
     group.on('dragend', (event) => onSectionDragEnd(event, group));
 
@@ -102,12 +153,8 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
       group.rotate(attrs.rotation);
     }
 
-
-    // const {buildTransform} = useTransformer();
-    // buildTransform(group);
-
-    layerEl.value.getNode().add(group);
-    layerEl.value.getNode().batchDraw();
+    ShapeStore.layerEl.getNode().add(group);
+    ShapeStore.layerEl.getNode().batchDraw();
 
     ShapeStore.setShape('sections', group);
     return group;
@@ -116,6 +163,7 @@ export const useSection = ({setCursor, stageEl, layerEl}) => {
   return {
     buildSection,
     onSectionDragStart,
-    onSectionDragEnd
+    onSectionDragEnd,
+    resetTransform
   };
 };

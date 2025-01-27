@@ -58,8 +58,9 @@ export const ShapeStore = reactive({
   },
 
   shapeOverlapping(shape, target = null) {
+    let ignoreIds = shape?.children?.map(entity => entity.id());
     const shapeBounds = (shape.children?.[0] || shape).getClientRect();
-    const items = [...this?.[target] || this.allShapes]
+    const items = [...this?.[target] || this.allShapes].filter(entity => !ignoreIds?.includes(entity?.id()));
     for (let item of items) {
       if (shape?.id() === item?.id()) {
         continue;
