@@ -67,6 +67,7 @@ export const useLabel = () => {
       height: attrs.height,
       fill: attrs.bg_color,
       stroke: '#000',
+      name: 'bg_color',
       strokeWidth: 1,
       dash: [5, 5]
     });
@@ -78,12 +79,9 @@ export const useLabel = () => {
       fontFamily: 'Roboto',
       fill: 'black',
       align: 'center',
+      name: 'text',
       verticalAlign: 'middle',
     });
-
-    if (attrs?.rotation) {
-      group.rotate(attrs.rotation);
-    }
 
     // Position text to center inside the container
     text.x(attrs.width / 2 - text.width() / 2);

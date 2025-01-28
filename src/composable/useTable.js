@@ -96,7 +96,7 @@ export const useTable = () => {
     if (attrs.shape === 'circle') {
       table = new Konva.Circle({
         ...tableConfig,
-        radius: attrs.width / 2,
+        radius: Math.abs(attrs.width / 2),
       });
     } else {
       table = new Konva.Rect(tableConfig);
@@ -109,6 +109,7 @@ export const useTable = () => {
       fontFamily: 'Roboto',
       fill: 'black',
       align: 'center',
+      name: 'text',
       verticalAlign: 'middle',
     });
 
@@ -145,10 +146,6 @@ export const useTable = () => {
     seats.forEach(seat => {
       group.add(seat);
     })
-
-    if (attrs?.rotation) {
-      group.rotate(attrs.rotation);
-    }
 
     group.on('dragend', (event) => onTableDragEnd(event, group))
 

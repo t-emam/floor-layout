@@ -1,5 +1,6 @@
 <script setup>
 import Konva from "konva";
+import Actions from "./components/Actions.vue";
 import {useTransformer} from "./composable/useTransformer.js";
 import {useBarrier} from "./composable/useBarrier.js";
 import {FloorStore} from './Store/FloorStore.js'
@@ -79,6 +80,10 @@ const drawFloorEntities = async () => {
 }
 
 onMounted(async () => {
+
+  ShapeStore.stageEl = stageEl.value;
+  ShapeStore.layerEl = layerEl.value;
+
   FloorStore.initFloor();
   await drawFloorEntities();
 
@@ -91,9 +96,6 @@ onMounted(async () => {
   con.addEventListener('dragover', function (e) {
     e.preventDefault();
   });
-
-  ShapeStore.stageEl = stageEl.value;
-  ShapeStore.layerEl = layerEl.value;
 });
 
 function onDragItem(type, event) {
@@ -326,6 +328,7 @@ const updateZoom = (zoom = 100) => {
 
 <template>
 
+  <Actions @drawShapes="drawFloorEntities" />
   <ItemsArea @select="({item, event})=>onDragItem(item, event)"/>
   <ItemsProprieties v-model="selectedShape" @update="value=>selectedShape=value"/>
   <div class="flex gap-4 absolute start-4 bottom-2">

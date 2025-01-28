@@ -194,7 +194,7 @@ const defaultFloorValues = [
         "width": 260,
         "x": 350,
         "y": 200,
-        "rotation": 45,
+        "rotation": 90,
         "bg_color": "#c6c6c6"
       },
       {
@@ -213,8 +213,8 @@ const defaultFloorValues = [
 export const FloorStore = reactive({
   floor: [],
 
-  initFloor() {
-    this.floor = Object.assign([], defaultFloorValues);
+  initFloor(data = null) {
+    this.floor = Object.assign([], data || defaultFloorValues);
     this.floor
       .map(entity => {
         // set parent id

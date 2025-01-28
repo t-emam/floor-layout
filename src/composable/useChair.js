@@ -3,7 +3,7 @@ import Konva from "konva";
 
 export const useChair = (config) => {
 
-  const seatRadius = 5 + (10 - config.number_of_seats / config.width * 100);
+  const seatRadius = Math.max(5 + (10 - config.number_of_seats / config.width * 100), 1);
 
   const calculatePositions = () => {
     const rectangles = [];
