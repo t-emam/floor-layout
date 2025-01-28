@@ -1,6 +1,7 @@
 import Konva from 'konva';
 import {useTransformer} from "../composable/useTransformer.js";
 import {nextTick, ref} from "vue";
+import {useChair} from './useChair.js';
 import {ShapeStore} from '../Store/ShapeStore.js';
 
 export const useTable = ({setCursor, stageEl, layerEl}) => {
@@ -47,11 +48,11 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       sectionOverlapping.add(table);
       ShapeStore.setSectionChild(table, sectionOverlapping.id());
 
-      await nextTick(()=>{
+      await nextTick(() => {
         const offsetX = eventX - sectionX - table.getWidth() / 2;
         const offsetY = eventY - sectionY - table.getHeight() / 2;
         table.setPosition({x: offsetX, y: offsetY});
-        if(table.parent.id() === sectionOverlapping.id()) {
+        if (table.parent.id() === sectionOverlapping.id()) {
           table.parent.moveToBottom()
           table.parent.getLayer()?.batchDraw();
           table.parent.clearCache();
@@ -137,6 +138,29 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
     group.add(table);
     group.add(text);
 
+    ///const {calculatePositions} = useChair(group.attrs)
+    // const seats = calculatePositions();
+    // seats.forEach((seat) => {
+    //   const chair = new Konva.Rect({
+    //     x: seat.x,
+    //     y: seat.y,
+    //     width: seat.width,
+    //     height: seat.height,
+    //     stroke:'#000',
+    //     strokeWidth:2
+    //   })
+    //   group.add(chair);
+    // })
+    // console.log({seats})
+
+    const {getSeats} = useChair(group.attrs)
+    let seats = getSeats()
+
+    seats.forEach(seat => {
+      group.add(seat);
+    })
+
+
     group.on('dragstart', (event) => onTableDragStart(event, group))
     group.on('dragend', (event) => onTableDragEnd(event, group))
     // group.on('transformend', (event) => onTableDragEnd(event, group))
@@ -144,8 +168,8 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
     const {buildTransform} = useTransformer();
     buildTransform(group);
 
-    layerEl.value.getNode().add(group);
-    layerEl.value.getNode().batchDraw();
+    ShapeStore.layerEl.getNode().add(group);
+    ShapeStore.layerEl.getNode().batchDraw();
 
     ShapeStore.setShape('tables', group);
     return group;
