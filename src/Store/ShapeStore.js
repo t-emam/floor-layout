@@ -67,7 +67,7 @@ export const ShapeStore = reactive({
       }
       const bounds = (item.children?.[0] || item).getClientRect();
       if (this.haveIntersection(shapeBounds, bounds)) {
-        console.log('item',item)
+        console.log('item',item, shapeBounds, bounds)
         return item;
       }
     }
@@ -91,7 +91,7 @@ export const ShapeStore = reactive({
       console.log('Create', this[entity], this[entity][index])
       return
     }
-    this[entity][index] = shape.clone();
+    this[entity][index] = shape;
     console.log('Update', this[entity], this[entity][index])
   },
 

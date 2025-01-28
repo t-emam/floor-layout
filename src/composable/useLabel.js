@@ -31,9 +31,9 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
     // overlapping section
     const sectionOverlapping = ShapeStore.shapeOverlapping(label, 'sections');
     if (!sectionOverlapping && !!label.parent?.id()) { // destroy o return to the previous position
-      return !tempPosition?.value ? label.destroy() : label.setPosition(tempPosition.value);
+       !tempPosition?.value ? label.destroy() : label.setPosition(tempPosition.value);
     }else if(!label.parent?.id() && sectionOverlapping?.id() && !label.attrs?.is_new){
-      return label.setPosition(tempPosition.value);
+       label.setPosition(tempPosition.value);
     }else if (sectionOverlapping?.id() !== label.parent?.id()) {
       const {x: sectionX, y: sectionY} = sectionOverlapping.getPosition();
       const {x: eventX, y: eventY} = event.evt
@@ -49,7 +49,6 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
 
     if (!!othersOverlapping) {
       label.children[0].fill('red');
-      return
     }
 
     ShapeStore.addOrEdit(label, 'labels');
