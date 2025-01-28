@@ -111,7 +111,6 @@ export const useChair = (config) => {
     let edgeIndex = 0;
 
 
-    console.log('remainingSeats', remainingSeats)
     seatsOnEachEdge['top'] = 1;
     seatsOnEachEdge['bottom'] = 1;
 

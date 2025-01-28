@@ -22,7 +22,6 @@ export const ShapeStore = reactive({
   setShape(entity = 'tables', shape) {
     shape.attrs['entity'] = entity;
     this[entity].push(shape);
-    console.log('shape.attrs',shape.attrs.entity)
   },
 
   setSectionChild(child, parentId) {
@@ -75,7 +74,6 @@ export const ShapeStore = reactive({
       }
       const bounds = (item?.children?.[0] || item)?.getClientRect();
       if (bounds && this.haveIntersection(shapeBounds, bounds)) {
-        console.log('item',item, shapeBounds, bounds)
         return item;
       }
     }
@@ -94,9 +92,9 @@ export const ShapeStore = reactive({
 
   addOrEdit(shape) {
     const entity = shape.attrs.entity
-    const index = this[entity].findIndex(entity => entity.id() === shape.id());
+    const index = this[entity].findIndex(entity => entity?.id() === shape.id());
     if (index < 0) {
-      return this.setShape(shape, entity)
+      return this.setShape(entity, shape)
     }
     this[entity][index] = shape;
     console.log('Update', this[entity], this[entity][index])

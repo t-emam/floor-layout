@@ -2,19 +2,20 @@ import Konva from "konva";
 import {useSection} from "./useSection.js";
 import {nextTick, ref} from "vue";
 import {ShapeStore} from "../Store/ShapeStore.js";
+
 const {resetTransform} = useSection({});
 export const useTransformer = () => {
 
   const transform = ref(null);
   const tempShape = ref(null);
 
-  const resetAllTransforms = ()=> {
+  const resetAllTransforms = () => {
     const allTransformers = ShapeStore.layerEl.getNode().getChildren().filter(child => child instanceof Konva.Transformer);
     allTransformers.forEach(transformer => {
       if (transformer) {
-        if(transformer.attrs?.is_section){
+        if (transformer.attrs?.is_section) {
           resetTransform(transformer.parent?.children?.[0], 0);
-        }else{
+        } else {
           transformer.hide();
           transformer.nodes([]);
         }
@@ -59,6 +60,7 @@ export const useTransformer = () => {
    */
   const onTransformStart = (event, shape) => {
     tempShape.value = event.currentTarget.clone()
+    console.log('Transform Start', tempShape.value)
   }
 
   /**
@@ -68,6 +70,7 @@ export const useTransformer = () => {
    */
   const onTransformDragStart = (event, shape) => {
     tempShape.value = event.currentTarget.clone()
+    console.log('Transform dragstart', tempShape.value)
     shape.moveToTop();
   }
 
@@ -77,7 +80,7 @@ export const useTransformer = () => {
    * @param shape
    */
   const onResetTransform = (event, shape) => {
-    if(!tempShape.value) {
+    if (!tempShape.value) {
       return shape.fire('destroy', event)
     }
 
@@ -89,8 +92,8 @@ export const useTransformer = () => {
     shape.x(config.x);
     shape.y(config.y);
 
-    shape.scaleX(1);
-    shape.scaleY(1);
+    shape.scaleX(config.scaleX);
+    shape.scaleY(config.scaleY);
     shape.rotation(config.rotation);
 
     if (shape.children && shape.children[0]) {
@@ -108,9 +111,6 @@ export const useTransformer = () => {
     shape.getLayer().getStage().batchDraw();
 
     tempShape.value = null
-
-    console.log('Shape after reset:', shape);
-    console.log('OldShape used for reset:', oldShape);
   }
 
   /**
@@ -118,7 +118,7 @@ export const useTransformer = () => {
    * @param event
    * @param shape
    */
-  const onTransformEnd  = (event, shape) => {
+  const onTransformEnd = (event, shape) => {
     transform.value.moveToTop()
     // console.log('before shape',{...shape})
     // shape.x = event.target.x();
@@ -139,7 +139,6 @@ export const useTransformer = () => {
     //
     // console.log('after shape',shape)
 
-    console.log(`Original Width: ${shape.width()}, Original Height: ${shape.height()}`);
     const newWidth = shape.width() * shape.scaleX();
     const newHeight = shape.height() * shape.scaleY();
 
@@ -159,16 +158,12 @@ export const useTransformer = () => {
     shape.x(event.target.x());
     shape.y(event.target.y());
 
-    shape.scaleX = event.target.scaleX;
-    shape.scaleY = event.target.scaleY;
-
-    console.log(`New Width: ${newWidth}, New Height: ${newHeight}`);
-    console.log(`Rotated Width: ${rotatedWidth}, Rotated Height: ${rotatedHeight}`);
-    console.log(`Shape Updated Details :=>`,shape.attrs);
+    shape.scaleX(event.target.scaleX());
+    shape.scaleY(event.target.scaleX());
 
     shape.getLayer().batchDraw();
-    return nextTick(()=>{
-      event.target.fire('dragend', event ,shape);
+    return nextTick(() => {
+      event.target.fire('dragend', event, shape);
     })
   }
 
@@ -180,13 +175,20 @@ export const useTransformer = () => {
    */
 
   const buildTransform = (shape) => {
+
+    const enabledAnchors = () => {
+      if (shape.attrs.shape === 'circle') {
+        return { enabledAnchors: ['top-left', 'bottom-right', 'bottom-left', 'top-right'] }
+      }
+      return null
+    }
     transform.value = new Konva.Transformer({
       visible: false,
-      enabledAnchors: shape.attrs.shape === 'circle' ? ['top-left', 'bottom-right'] : ['top-left', 'top-right', 'bottom-right', 'bottom-left'],
       resizeEnabled: true,
       rotateEnabled: true,
       rotateLineVisible: false,
-      padding: 5
+      padding: 5,
+      ...enabledAnchors()
     });
 
     shape.on('mousedown', (event) => onTransformerMouseIn(event, shape));

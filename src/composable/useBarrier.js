@@ -57,7 +57,7 @@ export const useBarrier = () => {
       defaultFill: "#000",
       x: attrs?.x,
       y: attrs?.y,
-      name: attrs.name,
+      name: 'barrier',
       type: attrs.type,
       rotation: attrs.rotation,
       parent_id: attrs.parent_id,

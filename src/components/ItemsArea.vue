@@ -10,7 +10,7 @@ const onDragItem = (item, event) => {
 </script>
 
 <template>
-  <div class="absolute top-0 z-10 w-full py-2">
+  <div class="absolute top-0 left-0 right-0 mx-auto z-10 w-[400px] py-2">
     <div
         class="flex justify-center items-center gap-3 py-2 px-3 w-fit mx-auto border shadow-lg rounded-lg"
     >
