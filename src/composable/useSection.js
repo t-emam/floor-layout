@@ -70,7 +70,7 @@ export const useSection = ({setCursor= null}) => {
    * @param section
    * @param timeout
    */
-  const resetTransform = (section, timeout = 5000) =>{
+  const resetTransform = (section, timeout = 20000) =>{
     // TODO: lodash Debounce
     setTimeout(() => {
       section.draggable(false);

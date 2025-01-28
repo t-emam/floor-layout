@@ -34,7 +34,7 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
        !tempPosition?.value ? label.destroy() : label.setPosition(tempPosition.value);
     }else if(!label.parent?.id() && sectionOverlapping?.id() && !label.attrs?.is_new){
        label.setPosition(tempPosition.value);
-    }else if (sectionOverlapping?.id() !== label.parent?.id()) {
+    }else if (sectionOverlapping && sectionOverlapping?.id() !== label.parent?.id()) {
       const {x: sectionX, y: sectionY} = sectionOverlapping.getPosition();
       const {x: eventX, y: eventY} = event.evt
       ShapeStore.setSectionChild(label, sectionOverlapping.id());

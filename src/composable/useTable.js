@@ -110,7 +110,7 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       table = new Konva.Circle({
         ...tableConfig,
         radiusX: attrs.width / 2,
-        heightY: attrs.height / 2,
+        radiusY: attrs.height / 2,
       });
     } else {
       table = new Konva.Rect(tableConfig);
@@ -130,9 +130,9 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       text.x(attrs.width / 2 - text.width() / 2);
       text.y(attrs.height / 2 - text.height() / 2);
     } else if (attrs.shape === 'circle') {
-      const radius = attrs.width / 2;
-      text.x(radius - text.width() / 2 - 20);
-      text.y(radius - text.height() / 2 - 17);
+      const radius = (attrs.width / 2);
+      text.x((radius - attrs.width / 2) - text.width()/2);
+      text.y((radius - attrs.height / 2) - text.height()/2);
     }
 
     group.add(table);

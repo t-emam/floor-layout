@@ -95,8 +95,8 @@ function onDragItem(type, event) {
       id: `_NEW_${ new Date().getTime().toString() }`,
       x: event.clientX,
       y: event.clientY,
-      width: 200,
-      height: 200,
+      width: 400,
+      height: 400,
       type: "section",
       name: `Section ${ label.substring(labelLength - 4, labelLength) }`,
       rotation: 0,
@@ -215,13 +215,16 @@ function onDragItem(type, event) {
 
       const section = ShapeStore.shapeOverlapping(label, 'sections');
 
-      const {x: sectionX, y: sectionY} = section.getPosition();
-      const eventX = event.clientX;
-      const eventY = event.clientY;
-      const offsetX = eventX - sectionX - label.getWidth() / 2;
-      const offsetY = eventY - sectionY - label.getHeight() / 2;
-      ShapeStore.setSectionChild(label, section.id());
-      label.setPosition({x: offsetX, y: offsetY})
+      if(section){
+        const {x: sectionX, y: sectionY} = section.getPosition();
+        const eventX = event.clientX;
+        const eventY = event.clientY;
+        const offsetX = eventX - sectionX - label.getWidth() / 2;
+        const offsetY = eventY - sectionY - label.getHeight() / 2;
+        ShapeStore.setSectionChild(label, section.id());
+        label.setPosition({x: offsetX, y: offsetY})
+      }
+
       onLabelDragEnd(event, label)
     })
   }

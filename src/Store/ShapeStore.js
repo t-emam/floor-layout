@@ -65,7 +65,7 @@ export const ShapeStore = reactive({
       if (shape?.id() === item?.id()) {
         continue;
       }
-      const bounds = (item.children?.[0] || item).getClientRect();
+      const bounds = (item?.children?.[0] || item).getClientRect();
       if (this.haveIntersection(shapeBounds, bounds)) {
         console.log('item',item, shapeBounds, bounds)
         return item;
