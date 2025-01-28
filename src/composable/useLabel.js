@@ -71,6 +71,7 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
       height: attrs.height,
       parent_id: attrs.parent_id,
       defaultFill: attrs.bg_color,
+      rotation: attrs.rotation,
       draggable: true,
     });
 

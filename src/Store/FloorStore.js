@@ -194,7 +194,7 @@ const defaultFloorValues = [
         "width": 260,
         "x": 350,
         "y": 200,
-        "rotation": 90,
+        "rotation": 45,
         "bg_color": "#c6c6c6"
       },
       {

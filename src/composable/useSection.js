@@ -134,10 +134,6 @@ export const useSection = ({setCursor= null}) => {
     group.add(section);
     group.add(text);
 
-    if (attrs?.rotation) {
-      group.rotate(attrs.rotation);
-    }
-
     group['transform'] = new Konva.Transformer({
       enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
       rotateLineVisible: true,

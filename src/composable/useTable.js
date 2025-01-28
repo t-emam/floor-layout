@@ -64,7 +64,6 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
     const othersTable = ShapeStore.shapeOverlapping(table, 'others');
     if (!!othersTable) {
       table.findOne('.table').fill('red');
-      return
     }
 
     delete table.attrs.is_new;
@@ -89,6 +88,7 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       height: attrs.height,
       type: attrs.type,
       shape: attrs.shape,
+      rotation: attrs.rotation,
       parent_id: attrs.parent_id,
       name: 'table-group',
       draggable: true,
@@ -160,6 +160,9 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       group.add(seat);
     })
 
+    if (attrs?.rotation) {
+      group.rotate(attrs.rotation);
+    }
 
     group.on('dragstart', (event) => onTableDragStart(event, group))
     group.on('dragend', (event) => onTableDragEnd(event, group))

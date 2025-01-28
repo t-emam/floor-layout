@@ -1,6 +1,6 @@
 import Konva from "konva";
 import {useSection} from "./useSection.js";
-import {ref} from "vue";
+import {nextTick, ref} from "vue";
 import {ShapeStore} from "../Store/ShapeStore.js";
 const {resetTransform} = useSection({});
 export const useTransformer = () => {
@@ -48,8 +48,6 @@ export const useTransformer = () => {
    * @param shape
    */
   const onTransformEnd  = (event, shape) => {
-
-    event.target.fire('dragend', event ,shape);
     transform.value.moveToTop()
     // console.log('before shape',{...shape})
     // shape.x = event.target.x();
@@ -69,6 +67,36 @@ export const useTransformer = () => {
     // event.target.scaleY(1);
     //
     // console.log('after shape',shape)
+
+
+    const newWidth = shape.width() * shape.scaleX();
+    const newHeight = shape.height() * shape.scaleY();
+
+    const rotation = shape.rotation();
+    const angleRad = rotation * Math.PI / 180;
+
+    const cosRotation = Math.cos(angleRad);
+    const sinRotation = Math.sin(angleRad);
+
+    const rotatedWidth = Math.abs(newWidth * cosRotation) + Math.abs(newHeight * sinRotation);
+    const rotatedHeight = Math.abs(newWidth * sinRotation) + Math.abs(newHeight * cosRotation);
+
+    shape.attrs.rotation = rotation;
+    shape.width(rotatedWidth);
+    shape.height(rotatedHeight);
+
+    shape.x(event.target.x());
+    shape.y(event.target.y());
+
+    console.log(`Original Width: ${shape.width()}, Original Height: ${shape.height()}`);
+    console.log(`New Width: ${newWidth}, New Height: ${newHeight}`);
+    console.log(`Rotated Width: ${rotatedWidth}, Rotated Height: ${rotatedHeight}`);
+    console.log(`Shape Updated Details :=>`,shape.attrs);
+
+    shape.getLayer().batchDraw();
+    return nextTick(()=>{
+      event.target.fire('dragend', event ,shape);
+    })
   }
 
 

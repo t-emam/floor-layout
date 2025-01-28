@@ -71,6 +71,7 @@ export const useBarrier = ({setCursor, stageEl, layerEl}) => {
       y: attrs?.y,
       name: attrs.name,
       type: attrs.type,
+      rotation: attrs.rotation,
       parent_id: attrs.parent_id,
       stroke: '#ccc',
       strokeWidth: 1,
