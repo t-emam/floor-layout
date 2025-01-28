@@ -26,6 +26,7 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
    */
   const onTableDragEnd = async (event, table) => {
     event?.evt?.preventDefault();
+    table.clearCache();
     table.moveToTop();
     table.findOne('.table').fill('#fff');
 
@@ -61,7 +62,6 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
     }
 
     const othersTable = ShapeStore.shapeOverlapping(table, 'others');
-
     if (!!othersTable) {
       table.findOne('.table').fill('red');
       return

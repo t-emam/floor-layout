@@ -25,9 +25,8 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
    */
   const onLabelDragEnd = async (event, label) => {
     event?.evt?.preventDefault();
+    label.clearCache();
     label.children[0].fill(label.attrs.defaultFill);
-
-    console.log('is new label', label.attrs?.is_new)
 
     // overlapping section
     const sectionOverlapping = ShapeStore.shapeOverlapping(label, 'sections');

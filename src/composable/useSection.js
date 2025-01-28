@@ -74,7 +74,7 @@ export const useSection = ({setCursor= null}) => {
     // TODO: lodash Debounce
     setTimeout(() => {
       section.draggable(false);
-      section.transform.nodes([]);
+      section.transform?.nodes([]);
     }, timeout)
   }
 

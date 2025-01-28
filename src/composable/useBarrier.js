@@ -25,6 +25,7 @@ export const useBarrier = ({setCursor, stageEl, layerEl}) => {
   const onBarrierDragEnd = async (event, barrier) => {
     event?.evt?.preventDefault();
     barrier.fill(barrier.attrs.defaultFill);
+    barrier.clearCache();
 
     // overlapping section
     const sectionOverlapping = ShapeStore.shapeOverlapping(barrier, 'sections');
