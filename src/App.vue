@@ -82,11 +82,22 @@ onMounted(async () => {
   FloorStore.initFloor();
   await drawFloorEntities();
 
+  const con = stageEl.value.getNode().container();
+
+  con.addEventListener('drop', (e) => {
+    e.preventDefault()
+  });
+
+  con.addEventListener('dragover', function (e) {
+    e.preventDefault();
+  });
+
   ShapeStore.stageEl = stageEl.value;
   ShapeStore.layerEl = layerEl.value;
 });
 
 function onDragItem(type, event) {
+  event.preventDefault();
   if (type === 'section') {
     const label = new Date().getTime().toString()
     const labelLength = label.length;
@@ -102,10 +113,15 @@ function onDragItem(type, event) {
       rotation: 0,
       revenue_center: null,
       children: [],
-      is_new: true
     }
 
     const section = buildSection(attrs);
+    const otherSection = ShapeStore.shapeOverlapping(section, 'sections');
+    if (!!otherSection) {
+      setCursor('not-allowed');
+      ShapeStore.destroyShape(section)
+      return setTimeout(() => setCursor(), 1000);
+    }
     return nextTick(() => {
       layerEl.value.getNode().add(section);
       layerEl.value.getNode().batchDraw();
@@ -116,32 +132,28 @@ function onDragItem(type, event) {
   if (type === 'rectangle' || type === 'circle') {
     return nextTick(() => {
 
-      const label = new Date().getTime().toString()
-      const labelLength = label.length;
-
+      const count = ShapeStore.tables.length +1;
       const table = buildTable({
         x: event.x,
         y: event.y,
-        width: 200,
-        height: 200,
+        width: 50,
+        height: 50,
         type: "table",
         shape: type === 'rectangle' ? "rect" : "circle",
         id: new Date().getTime(),
-        name: `Table ${ label.substring(labelLength - 4, labelLength) }`,
+        name: `T${ count }`,
         number_of_seats: 4,
         rotation: 0,
         revenue_center: null,
-        is_new: true
+        fill:'#E5E5EA'
       })
 
       const section = ShapeStore.shapeOverlapping(table, 'sections');
-      if (!section) {
+      const others = ShapeStore.shapeOverlapping(table, 'others');
+      if (!section || !!others) {
         setCursor('not-allowed');
-        table.destroy()
-        setTimeout(() => {
-          setCursor();
-        }, 1000);
-        return;
+        ShapeStore.destroyShape(table)
+        return setTimeout(() => setCursor(), 1000);
       }
 
 
@@ -161,27 +173,22 @@ function onDragItem(type, event) {
     return nextTick(() => {
       const barrier = buildBarrier({
         type: "barrier",
-        defaultFill: "#f4c121",
         id: new Date().getTime().toString(),
         height: 10,
         width: 110,
         x: event.x,
         y: event.y,
         rotation: 0,
-        bg_color: "#f4c121",
-        is_new: true
       })
 
       barrier.moveToTop();
 
       const section = ShapeStore.shapeOverlapping(barrier, 'sections');
-      if (!section) {
+      const others = ShapeStore.shapeOverlapping(barrier, 'others');
+      if (!section || !!others) {
         setCursor('not-allowed');
-        barrier.destroy()
-        setTimeout(() => {
-          setCursor();
-        }, 1000);
-        return;
+        ShapeStore.destroyShape(barrier)
+        return setTimeout(() => setCursor(), 1000);
       }
 
       // set table position
@@ -207,14 +214,18 @@ function onDragItem(type, event) {
         x: event.layerX,
         y: event.layerY,
         rotation: 0,
-        bg_color: "#c6c6c6",
-        is_new: true
+        bg_color: "transparent",
       })
 
       label.moveToTop();
 
       const section = ShapeStore.shapeOverlapping(label, 'sections');
-
+      const others = ShapeStore.shapeOverlapping(label, 'others');
+      if (!!others) {
+        setCursor('not-allowed');
+        ShapeStore.destroyShape(label)
+        return setTimeout(() => setCursor(), 1000);
+      }
       if(section){
         const {x: sectionX, y: sectionY} = section.getPosition();
         const eventX = event.clientX;
@@ -315,7 +326,7 @@ const updateZoom = (zoom = 100) => {
 
 <template>
 
-  <ItemsArea @dragend="({item, event})=>onDragItem(item, event)"/>
+  <ItemsArea @select="({item, event})=>onDragItem(item, event)"/>
   <ItemsProprieties v-model="selectedShape" @update="value=>selectedShape=value"/>
   <div class="flex gap-4 absolute start-4 bottom-2">
     <Zoom @zoom="updateZoom"/>

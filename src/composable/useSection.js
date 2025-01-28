@@ -37,7 +37,7 @@ export const useSection = ({setCursor= null}) => {
 
     setCursor('not-allowed');
     if(!tempPosition?.value){
-      ShapeStore.destroyShape(section, 'sections')
+      ShapeStore.destroyShape(section)
     } else {
       section.setPosition({...tempPosition.value})
     }

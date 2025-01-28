@@ -3,6 +3,8 @@ import Konva from "konva";
 
 export const useChair = (config) => {
 
+  const seatRadius = 5 + (10 - config.number_of_seats / config.width * 100);
+
   const calculatePositions = () => {
     const rectangles = [];
     const size = Math.min(config.width, config.height) * 0.1; // Relative size (10% of the smallest dimension)
@@ -146,7 +148,7 @@ export const useChair = (config) => {
         // Create the seat as a Konva Circle
         const seat = new Konva.Circle({
           id: `${ config.id }-seat-${ seats.length }`,
-          radius: 15,
+          radius: seatRadius,
           x: seatX,
           y: seatY,
           fill: '#000',
@@ -162,7 +164,6 @@ export const useChair = (config) => {
   };
 
   const circleSeats = () => {
-    const seatRadius = 5 + (10 - config.number_of_seats / 100);
     const angleStep = (2 * Math.PI) / config.number_of_seats;
     const seats = [];
 

@@ -19,8 +19,10 @@ export const ShapeStore = reactive({
   labels: [],
   barriers: [],
 
-  setShape(type = 'tables', shape) {
-    this[type].push(shape);
+  setShape(entity = 'tables', shape) {
+    shape.attrs['entity'] = entity;
+    this[entity].push(shape);
+    console.log('shape.attrs',shape.attrs.entity)
   },
 
   setSectionChild(child, parentId) {
@@ -57,16 +59,22 @@ export const ShapeStore = reactive({
     ]
   },
 
+  /**
+   * Shape Overlapping check
+   * @param shape
+   * @param target <string>: 'sections'|'others'
+   * @returns {null | ovelappingItem: Konva.Group}
+   */
   shapeOverlapping(shape, target = null) {
     let ignoreIds = shape?.children?.map(entity => entity.id());
-    const shapeBounds = (shape.children?.[0] || shape).getClientRect();
+    const shapeBounds = (shape.children?.[0] || shape)?.getClientRect();
     const items = [...this?.[target] || this.allShapes].filter(entity => !ignoreIds?.includes(entity?.id()));
     for (let item of items) {
       if (shape?.id() === item?.id()) {
         continue;
       }
-      const bounds = (item?.children?.[0] || item).getClientRect();
-      if (this.haveIntersection(shapeBounds, bounds)) {
+      const bounds = (item?.children?.[0] || item)?.getClientRect();
+      if (bounds && this.haveIntersection(shapeBounds, bounds)) {
         console.log('item',item, shapeBounds, bounds)
         return item;
       }
@@ -84,18 +92,18 @@ export const ShapeStore = reactive({
     );
   },
 
-  addOrEdit(shape, entity) {
+  addOrEdit(shape) {
+    const entity = shape.attrs.entity
     const index = this[entity].findIndex(entity => entity.id() === shape.id());
     if (index < 0) {
-      this[entity].push(shape);
-      console.log('Create', this[entity], this[entity][index])
-      return
+      return this.setShape(shape, entity)
     }
     this[entity][index] = shape;
     console.log('Update', this[entity], this[entity][index])
   },
 
-  destroyShape(shape, entity) {
+  destroyShape(shape) {
+    const entity = shape.attrs.entity
     const index = this[entity].findIndex(entity => !!entity && entity.id() === shape.id());
     if (index > -1) {
       this[entity][index] = null;

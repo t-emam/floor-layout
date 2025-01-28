@@ -6,6 +6,7 @@ const {resetTransform} = useSection({});
 export const useTransformer = () => {
 
   const transform = ref(null);
+  const tempShape = ref(null);
 
   const resetAllTransforms = ()=> {
     const allTransformers = ShapeStore.layerEl.getNode().getChildren().filter(child => child instanceof Konva.Transformer);
@@ -43,6 +44,76 @@ export const useTransformer = () => {
 
 
   /**
+   * Event for the destroying shape
+   * @param event
+   * @param shape
+   */
+  const onDestroyTransform = (event, shape) => {
+    shape.destroy(shape, shape.attrs.entity);
+  }
+
+  /**
+   * Event for the transform starting (Save the old shape)
+   * @param event
+   * @param shape
+   */
+  const onTransformStart = (event, shape) => {
+    tempShape.value = event.currentTarget.clone()
+  }
+
+  /**
+   * Event for the transform dragging start (Save the old shape)
+   * @param event
+   * @param shape
+   */
+  const onTransformDragStart = (event, shape) => {
+    tempShape.value = event.currentTarget.clone()
+    shape.moveToTop();
+  }
+
+  /**
+   * On Reset Transform event listener
+   * @param event
+   * @param shape
+   */
+  const onResetTransform = (event, shape) => {
+    if(!tempShape.value) {
+      return shape.fire('destroy', event)
+    }
+
+    const oldShape = tempShape.value;
+
+    const config = oldShape.attrs;
+    shape.width(config.width);
+    shape.height(config.height);
+    shape.x(config.x);
+    shape.y(config.y);
+
+    shape.scaleX(1);
+    shape.scaleY(1);
+    shape.rotation(config.rotation);
+
+    if (shape.children && shape.children[0]) {
+      shape.children[0].fill(config?.defaultFill || config?.fill || "#000");
+    } else {
+      shape.fill(config?.defaultFill || config?.fill || "#000");
+    }
+
+    if (oldShape.parent && oldShape.parent.id() !== shape.parent.id()) {
+      oldShape.parent.add(shape);
+    }
+
+    ShapeStore.addOrEdit(shape);
+    shape.getLayer().batchDraw();
+    shape.getLayer().getStage().batchDraw();
+
+    tempShape.value = null
+
+    console.log('Shape after reset:', shape);
+    console.log('OldShape used for reset:', oldShape);
+  }
+
+  /**
    * On Transform End event listener
    * @param event
    * @param shape
@@ -68,7 +139,7 @@ export const useTransformer = () => {
     //
     // console.log('after shape',shape)
 
-
+    console.log(`Original Width: ${shape.width()}, Original Height: ${shape.height()}`);
     const newWidth = shape.width() * shape.scaleX();
     const newHeight = shape.height() * shape.scaleY();
 
@@ -88,7 +159,9 @@ export const useTransformer = () => {
     shape.x(event.target.x());
     shape.y(event.target.y());
 
-    console.log(`Original Width: ${shape.width()}, Original Height: ${shape.height()}`);
+    shape.scaleX = event.target.scaleX;
+    shape.scaleY = event.target.scaleY;
+
     console.log(`New Width: ${newWidth}, New Height: ${newHeight}`);
     console.log(`Rotated Width: ${rotatedWidth}, Rotated Height: ${rotatedHeight}`);
     console.log(`Shape Updated Details :=>`,shape.attrs);
@@ -117,7 +190,11 @@ export const useTransformer = () => {
     });
 
     shape.on('mousedown', (event) => onTransformerMouseIn(event, shape));
+    shape.on('transformstart', (event) => onTransformStart(event, shape));
     shape.on('transformend', (event) => onTransformEnd(event, shape));
+    shape.on('dragstart', (event) => onTransformDragStart(event, shape));
+    shape.on('reset', (event) => onResetTransform(event, shape));
+    shape.on('destroy', (event) => onDestroyTransform(event, shape));
 
     return shape['transformer']
   }

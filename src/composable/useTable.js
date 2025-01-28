@@ -1,22 +1,10 @@
 import Konva from 'konva';
 import {useTransformer} from "../composable/useTransformer.js";
-import {nextTick, ref} from "vue";
+import {nextTick} from "vue";
 import {useChair} from './useChair.js';
 import {ShapeStore} from '../Store/ShapeStore.js';
 
-export const useTable = ({setCursor, stageEl, layerEl}) => {
-
-  const tempPosition = ref(null);
-
-  /**
-   * Handle on Table Drag Start event listener
-   * @param event
-   * @param table
-   */
-  const onTableDragStart = (event, table) => {
-    tempPosition.value = event.currentTarget.getPosition();
-    table.moveToTop();
-  }
+export const useTable = () => {
 
   /**
    * Handle on Table Drag End event listener
@@ -28,19 +16,22 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
     event?.evt?.preventDefault();
     table.clearCache();
     table.moveToTop();
-    table.findOne('.table').fill('#fff');
 
     // overlapping section
     const sectionOverlapping = ShapeStore.shapeOverlapping(table, 'sections');
     if (!sectionOverlapping) { // destroy o return to the previous position
       if (table.attrs?.is_new) {
-        return ShapeStore.destroyShape(table, 'tables')
+        return ShapeStore.destroyShape(table)
       }
 
       return nextTick(() => {
-        table.setPosition(tempPosition.value);
-        table.moveToTop();
+        table.fire('reset', event)
       })
+    }
+
+    const othersTable = ShapeStore.shapeOverlapping(table, 'others');
+    if (!!othersTable) {
+      return table.fire('reset', event)
     }
 
     if (!!sectionOverlapping && sectionOverlapping.id() !== table.parent.id()) {
@@ -61,12 +52,7 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       })
     }
 
-    const othersTable = ShapeStore.shapeOverlapping(table, 'others');
-    if (!!othersTable) {
-      table.findOne('.table').fill('red');
-    }
 
-    delete table.attrs.is_new;
     table.getLayer()?.batchDraw();
     ShapeStore.addOrEdit(table, 'tables');
     return nextTick(() => {
@@ -86,13 +72,15 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       y: attrs?.y,
       width: attrs.width,
       height: attrs.height,
+      defaultFill: '#E5E5EA',
+      fill: '#E5E5EA',
       type: attrs.type,
       shape: attrs.shape,
       rotation: attrs.rotation,
       parent_id: attrs.parent_id,
       name: 'table-group',
       draggable: true,
-      number_of_seats: attrs.number_of_seats
+      number_of_seats: attrs.number_of_seats,
     });
 
     let table = null;
@@ -100,17 +88,15 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       id: attrs.id,
       width: attrs.width,
       height: attrs.height,
-      fill: '#fff',
-      stroke: '#ccc',
-      strokeWidth: 1,
+      defaultFill: '#E5E5EA',
+      fill: '#E5E5EA',
       name: 'table'
     }
 
     if (attrs.shape === 'circle') {
       table = new Konva.Circle({
         ...tableConfig,
-        radiusX: attrs.width / 2,
-        radiusY: attrs.height / 2,
+        radius: attrs.width / 2,
       });
     } else {
       table = new Konva.Rect(tableConfig);
@@ -131,8 +117,8 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       text.y(attrs.height / 2 - text.height() / 2);
     } else if (attrs.shape === 'circle') {
       const radius = (attrs.width / 2);
-      text.x((radius - attrs.width / 2) - text.width()/2);
-      text.y((radius - attrs.height / 2) - text.height()/2);
+      text.x((radius - attrs.width / 2) - text.width() / 2);
+      text.y((radius - attrs.height / 2) - text.height() / 2);
     }
 
     group.add(table);
@@ -164,9 +150,7 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
       group.rotate(attrs.rotation);
     }
 
-    group.on('dragstart', (event) => onTableDragStart(event, group))
     group.on('dragend', (event) => onTableDragEnd(event, group))
-    // group.on('transformend', (event) => onTableDragEnd(event, group))
 
     const {buildTransform} = useTransformer();
     buildTransform(group);
@@ -180,7 +164,6 @@ export const useTable = ({setCursor, stageEl, layerEl}) => {
 
   return {
     buildTable,
-    onTableDragStart,
     onTableDragEnd,
   };
 };

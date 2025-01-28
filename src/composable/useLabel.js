@@ -3,19 +3,9 @@ import {useTransformer} from "../composable/useTransformer.js";
 import {ShapeStore} from "../Store/ShapeStore.js";
 import {ref} from "vue";
 
-export const useLabel = ({setCursor, stageEl, layerEl}) => {
+export const useLabel = () => {
 
   const tempPosition = ref(null);
-
-  /**
-   * Handle on Label Drag Start event listener
-   * @param event
-   * @param label
-   */
-  const onLabelDragStart = (event, label) => {
-    tempPosition.value = event.currentTarget.getPosition()
-    label.moveToTop();
-  }
 
   /**
    * Handle on Label Drag End event listener
@@ -28,27 +18,23 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
     label.clearCache();
     label.children[0].fill(label.attrs.defaultFill);
 
-    // overlapping section
+    // overlapping
     const sectionOverlapping = ShapeStore.shapeOverlapping(label, 'sections');
-    if (!sectionOverlapping && !!label.parent?.id()) { // destroy o return to the previous position
-       !tempPosition?.value ? label.destroy() : label.setPosition(tempPosition.value);
-    }else if(!label.parent?.id() && sectionOverlapping?.id() && !label.attrs?.is_new){
-       label.setPosition(tempPosition.value);
-    }else if (sectionOverlapping && sectionOverlapping?.id() !== label.parent?.id()) {
-      const {x: sectionX, y: sectionY} = sectionOverlapping.getPosition();
-      const {x: eventX, y: eventY} = event.evt
-      ShapeStore.setSectionChild(label, sectionOverlapping.id());
-
-      const offsetX = eventX - sectionX - label.getWidth() / 2;
-      const offsetY = eventY - sectionY - label.getHeight() / 2;
-      label.setPosition({x: offsetX, y: offsetY});
-    }
-
-    // overlapping label
     const othersOverlapping = ShapeStore.shapeOverlapping(label, 'others');
 
     if (!!othersOverlapping) {
-      label.children[0].fill('red');
+      label.fire('reset', event);
+    } else if (!sectionOverlapping && !!label.parent?.id()) { // destroy o return to the previous position
+      label.fire('reset', event);
+    } else if (!label.parent?.id() && sectionOverlapping?.id() && !label.attrs?.is_new) {
+      label.fire('reset', event);
+    } else if (sectionOverlapping && sectionOverlapping?.id() !== label.parent?.id()) {
+      const {x: sectionX, y: sectionY} = sectionOverlapping.getPosition();
+      const {x: eventX, y: eventY} = event.evt
+      ShapeStore.setSectionChild(label, sectionOverlapping.id());
+      const offsetX = eventX - sectionX - label.getWidth() / 2;
+      const offsetY = eventY - sectionY - label.getHeight() / 2;
+      label.setPosition({x: offsetX, y: offsetY});
     }
 
     ShapeStore.addOrEdit(label, 'labels');
@@ -80,8 +66,9 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
       width: attrs.width,
       height: attrs.height,
       fill: attrs.bg_color,
-      stroke: '#ccc',
+      stroke: '#000',
       strokeWidth: 1,
+      dash: [5, 5]
     });
 
     const text = new Konva.Text({
@@ -105,14 +92,13 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
     group.add(container);
     group.add(text);
 
-    group.on('dragstart', (event) => onLabelDragStart(event, group))
     group.on('dragend', (event) => onLabelDragEnd(event, group))
 
     const {buildTransform} = useTransformer();
     buildTransform(group);
 
-    layerEl.value.getNode().add(group);
-    layerEl.value.getNode().batchDraw();
+    ShapeStore.layerEl.getNode().add(group);
+    ShapeStore.layerEl.getNode().batchDraw();
 
     ShapeStore.setShape('labels', group);
     return group;
@@ -120,7 +106,6 @@ export const useLabel = ({setCursor, stageEl, layerEl}) => {
 
   return {
     buildLabel,
-    onLabelDragStart,
     onLabelDragEnd,
   }
 }
