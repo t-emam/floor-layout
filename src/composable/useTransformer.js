@@ -38,7 +38,6 @@ export const useTransformer = () => {
 
     transform.value.nodes([shape]);
     transform.value.show()
-    transform.value.moveToTop()
     ShapeStore.layerEl.getNode().add(transform.value);
     ShapeStore.layerEl.getNode().batchDraw();
   }
@@ -50,7 +49,7 @@ export const useTransformer = () => {
    * @param shape
    */
   const onDestroyTransform = (event, shape) => {
-    shape.destroy(shape, shape.attrs.entity);
+    ShapeStore.destroyShape(shape)
   }
 
   /**
@@ -59,8 +58,7 @@ export const useTransformer = () => {
    * @param shape
    */
   const onTransformStart = (event, shape) => {
-    tempShape.value = event.currentTarget.clone()
-    console.log('Transform Start', tempShape.value)
+    tempShape.value = event.target.clone()
   }
 
   /**
@@ -69,8 +67,7 @@ export const useTransformer = () => {
    * @param shape
    */
   const onTransformDragStart = (event, shape) => {
-    tempShape.value = event.currentTarget.clone()
-    console.log('Transform dragstart', tempShape.value)
+    tempShape.value = event.target.clone()
     shape.moveToTop();
   }
 
@@ -80,13 +77,15 @@ export const useTransformer = () => {
    * @param shape
    */
   const onResetTransform = (event, shape) => {
+    ShapeStore.setCursorNotAllowed();
     if (!tempShape.value) {
+      debugger
       return shape.fire('destroy', event)
     }
 
     const oldShape = tempShape.value;
 
-    const config = oldShape.attrs;
+    const config = oldShape?.attrs;
     shape.width(config.width);
     shape.height(config.height);
     shape.x(config.x);
@@ -120,50 +119,34 @@ export const useTransformer = () => {
    */
   const onTransformEnd = (event, shape) => {
     transform.value.moveToTop()
-    // console.log('before shape',{...shape})
-    // shape.x = event.target.x();
-    // shape.y = event.target.y();
-    //
-    // shape.width = Math.max(
-    //   event.target.width() * event.target.scaleX(),
-    //   shape.attrs.type === 'barrier' ? 1 : 30
-    // );
-    //
-    // shape.height = Math.max(
-    //   event.target.height() * event.target.scaleY(),
-    //   shape.type === 'barrier' ? 1 : 30
-    // );
-    // // reset scale to 1
-    // event.target.scaleX(1);
-    // event.target.scaleY(1);
-    //
-    // console.log('after shape',shape)
 
-    const newWidth = shape.width() * shape.scaleX();
-    const newHeight = shape.height() * shape.scaleY();
 
-    const rotation = shape.rotation();
-    const angleRad = rotation * Math.PI / 180;
+    const width = event.target.width() * event.target.scaleX();
+    const height = event.target.height() * event.target.scaleY();
 
-    const cosRotation = Math.cos(angleRad);
-    const sinRotation = Math.sin(angleRad);
+    shape.setAttrs({
+      width,
+      height,
+      x:event.target.x(),
+      y:event.target.y(),
+      rotation: shape.rotation(),
+    });
 
-    const rotatedWidth = Math.abs(newWidth * cosRotation) + Math.abs(newHeight * sinRotation);
-    const rotatedHeight = Math.abs(newWidth * sinRotation) + Math.abs(newHeight * cosRotation);
+    shape.children.forEach(child => {
+      const width = child.width() * child.scaleX();
+      const height = child.height() * child.scaleY();
 
-    shape.attrs.rotation = rotation;
-    shape.width(rotatedWidth);
-    shape.height(rotatedHeight);
-
-    shape.x(event.target.x());
-    shape.y(event.target.y());
-
-    shape.scaleX(event.target.scaleX());
-    shape.scaleY(event.target.scaleX());
+      child.setAttrs({
+        width,
+        height,
+        scaleX: 1,
+        scaleY: 1,
+      });
+    })
 
     shape.getLayer().batchDraw();
     return nextTick(() => {
-      event.target.fire('dragend', event, shape);
+      shape.fire('dragend', event, shape);
     })
   }
 
@@ -188,9 +171,75 @@ export const useTransformer = () => {
       rotateEnabled: true,
       rotateLineVisible: false,
       padding: 5,
-      ...enabledAnchors()
-    });
+      ignoreStroke: true,
+      ...enabledAnchors(),
+      boundBoxFunc: function (oldBoundBox, newBoundBox) {
+        // "boundBox" is an object with
+        // x, y, width, height and rotation properties
+        // transformer tool will try to fit nodes into that box
 
+        // the logic is simple, if new width is too big
+        // we will return previous state
+
+        // console.log('newBoundBox.width',newBoundBox)
+        // transform.value.rotation(newBoundBox.rotation)
+        // transform.value.width(newBoundBox.width)
+        // transform.value.height(newBoundBox.height)
+        // transform.value.x(newBoundBox.x)
+        // transform.value.y(newBoundBox.y)
+
+        return newBoundBox;
+      },
+      anchorDragBoundFunc: function (oldPos, newPos, event) {
+        // oldPos - is old absolute position of the anchor
+        // newPos - is a new (possible) absolute position of the anchor based on pointer position
+        // it is possible that anchor will have a different absolute position after this function
+        // because every anchor has its own limits on position, based on resizing logic
+        // do not snap rotating point
+        if (transform.value.getActiveAnchor() === 'rotater') {
+          return newPos;
+        }
+
+        const dist = Math.sqrt(
+          Math.pow(newPos.x - oldPos.x, 2) + Math.pow(newPos.y - oldPos.y, 2)
+        );
+
+        // do not do any snapping with new absolute position (pointer position)
+        // is too far away from old position
+        if (dist > 10) {
+          return newPos;
+        }
+
+        const closestX = Math.round(newPos.x / shape.attrs.width) * shape.attrs.width;
+        const diffX = Math.abs(newPos.x - closestX);
+
+        const closestY = Math.round(newPos.y / shape.attrs.height) * shape.attrs.height;
+        const diffY = Math.abs(newPos.y - closestY);
+
+        const snappedX = diffX < 10;
+        const snappedY = diffY < 10;
+
+        // a bit different snap strategies based on snap direction
+        // we need to reuse old position for better UX
+        if (snappedX && !snappedY) {
+          return {
+            x: closestX,
+            y: oldPos.y,
+          };
+        } else if (snappedY && !snappedX) {
+          return {
+            x: oldPos.x,
+            y: closestY,
+          };
+        } else if (snappedX && snappedY) {
+          return {
+            x: closestX,
+            y: closestY,
+          };
+        }
+        return newPos;
+      },
+    });
     shape.on('mousedown', (event) => onTransformerMouseIn(event, shape));
     shape.on('transformstart', (event) => onTransformStart(event, shape));
     shape.on('transformend', (event) => onTransformEnd(event, shape));

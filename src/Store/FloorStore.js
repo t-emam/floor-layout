@@ -268,8 +268,4 @@ export const FloorStore = reactive({
         entity.children?.filter(child => child.type === 'table') || []
       ) || []
   },
-
-  findSectionById(id) {
-    return this.floor.find(section => section.id === id);
-  }
 })

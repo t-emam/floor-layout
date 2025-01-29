@@ -2,7 +2,7 @@ import Konva from 'konva';
 import {ShapeStore} from "../Store/ShapeStore.js";
 import {nextTick, ref} from 'vue';
 
-export const useSection = ({setCursor = null}) => {
+export const useSection = () => {
   const tempSection = ref(null);
 
   /**
@@ -22,23 +22,22 @@ export const useSection = ({setCursor = null}) => {
    */
   const onSectionDragEnd = (event, section) => {
     event?.evt?.preventDefault()
+    resetTransform(section);
 
     if (event?.target instanceof Konva.Group && event?.target?.id() !== section?.id()) {
       return event?.evt.stopPropagation();
     }
     const otherSections = ShapeStore.shapeOverlapping(section, 'sections')
-    let others = ShapeStore.shapeOverlapping(section, 'others');
-
-    resetTransform(section);
+    const others = ShapeStore.shapeOverlapping(section, 'others');
 
     if (!otherSections && !others) {
-      return ShapeStore.addOrEdit(section, 'sections')
+      // Rule:: In case section dropped in empty space
+      return ShapeStore.addOrEdit(section)
     }
 
-    setCursor('not-allowed');
-    section?.fire('reset', event)
-    setTimeout(() => setCursor('auto'), 1000);
-
+    // Rule:: In case section dropped on top of shape or another section
+    ShapeStore.setCursorNotAllowed();
+    section?.fire('reset', event);
     return others || otherSections
   }
 
@@ -74,6 +73,7 @@ export const useSection = ({setCursor = null}) => {
    */
   const onSectionReset = (event, section) => {
     event.evt.stopPropagation();
+    ShapeStore.setCursorNotAllowed();
     const oldSection = tempSection.value;
     const config = oldSection.attrs;
 
@@ -117,21 +117,21 @@ export const useSection = ({setCursor = null}) => {
     resetTransform(section)
     onSectionDragEnd(event, section);
 
-    const originalWidth = section.width();
-    const originalHeight = section.height();
-    const newRotation = section.rotation();
+    const originalWidth = event.target.width();
+    const originalHeight = event.target.height();
+    const newRotation = event.target.rotation();
 
-    const newWidth = section.getClientRect().width;
-    const newHeight = section.getClientRect().height;
+    const newWidth = event.target.getClientRect().width;
+    const newHeight = event.target.getClientRect().height;
 
     const scaleX = newWidth / originalWidth;
     const scaleY = newHeight / originalHeight;
 
-    section.width(newWidth)
-    section.height(newHeight)
-    section.rotation(newRotation);
+    event.target.width(newWidth)
+    event.target.height(newHeight)
+    event.target.rotation(newRotation);
 
-    section.getChildren().forEach((child) => {
+    event.target.getChildren().forEach((child) => {
       if (child instanceof Konva.Group || child.hasName('barrier')) {
         const width = child.getClientRect().width;
         const height = child.getClientRect().height;
@@ -165,8 +165,8 @@ export const useSection = ({setCursor = null}) => {
       // }
     });
 
-    section.scaleX(scaleX)
-    section.scaleY(scaleY)
+    // event.target.scaleX(1)
+    // event.target.scaleY(1)
 
     section.clearCache();
     ShapeStore.addOrEdit(section);

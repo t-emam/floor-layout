@@ -17,52 +17,25 @@ export const useTable = () => {
     table.clearCache();
     table.moveToTop();
 
-    // overlapping section
     const sectionOverlapping = ShapeStore.shapeOverlapping(table, 'sections');
-    if (!sectionOverlapping) { // destroy o return to the previous position
-      if (table.attrs?.is_new) {
-        return ShapeStore.destroyShape(table)
-      }
-
-      return nextTick(() => {
-        table.fire('reset', event)
-      })
-    }
-
     const othersTable = ShapeStore.shapeOverlapping(table, 'others');
     if (!!othersTable) {
-      try {
-        table?.fire('reset', event)
-      } catch (e) {
-        ShapeStore.destroyShape(table)
-      }
-      return
-    }
-
-    if (!!sectionOverlapping && sectionOverlapping.id() !== table.parent.id()) {
+      // Rule:: In case table dropped on top of shape elements ::
+      return table?.fire('reset', event)
+    } else if (!sectionOverlapping) {
+      // Rule:: In case table dropped out of section ::
+      return table.fire('reset', event)
+    } else if (sectionOverlapping.id() !== table.parent.id()) {
+      // Rule:: In case table dropped in section ::
       const {x: sectionX, y: sectionY} = sectionOverlapping.getPosition();
       const {layerX: eventX, layerY: eventY} = event.evt
-      sectionOverlapping.add(table);
       ShapeStore.setSectionChild(table, sectionOverlapping.id());
-
-      await nextTick(() => {
-        const offsetX = eventX - sectionX - table.getWidth() / 2;
-        const offsetY = eventY - sectionY - table.getHeight() / 2;
-        table.setPosition({x: offsetX, y: offsetY});
-        if (table.parent.id() === sectionOverlapping.id()) {
-          table.parent.moveToBottom()
-          table.parent.getLayer()?.batchDraw();
-          table.parent.clearCache();
-        }
-      })
+      const offsetX = eventX - sectionX - table.getWidth() / 2;
+      const offsetY = eventY - sectionY - table.getHeight() / 2;
+      table.setPosition({x: offsetX, y: offsetY});
     }
 
-
-    table.getLayer()?.batchDraw();
-    ShapeStore.addOrEdit(table, 'tables');
-    return nextTick(() => {
-      table.moveToTop();
-    })
+    ShapeStore.addOrEdit(table);
   }
 
   /**
@@ -97,7 +70,8 @@ export const useTable = () => {
       height: attrs.height,
       defaultFill: '#E5E5EA',
       fill: '#E5E5EA',
-      name: 'table'
+      name: 'table',
+      strokeScaleEnabled: false,
     }
 
     if (attrs.shape === 'circle') {

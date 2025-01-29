@@ -2,7 +2,7 @@
 import {AppWindowMac, Circle, LayoutTemplateIcon, Square, SquareDashed, Table2} from "lucide-vue-next";
 import {defineEmits} from "vue"
 
-const emit = defineEmits('select');
+const emit = defineEmits(['select']);
 
 const onDragItem = (item, event) => {
   emit('select', {item, event});

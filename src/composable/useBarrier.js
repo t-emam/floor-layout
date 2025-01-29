@@ -14,32 +14,25 @@ export const useBarrier = () => {
     event?.evt?.preventDefault();
     barrier.fill(barrier.attrs.defaultFill);
     barrier.clearCache();
-
-    // overlapping section
+    const othersOverlapping = ShapeStore.shapeOverlapping(barrier, 'others');
     const sectionOverlapping = ShapeStore.shapeOverlapping(barrier, 'sections');
-    if (!sectionOverlapping) { // destroy o return to the previous position
-      return barrier.fire('reset', event);
-    }
 
-    if (sectionOverlapping.id() !== barrier.parent.id()) {
+    if (!!othersOverlapping) {
+      // Rule:: In case barrier dropped on top of shape element ::
+      return barrier.fire('reset', event)
+    } else if (!sectionOverlapping) {
+      // Rule:: In case barrier dropped out of section ::
+      return barrier.fire('reset', event);
+    } else if (sectionOverlapping.id() !== barrier.parent.id()) {
+      // Rule:: In case barrier dropped in section ::
       const {x: sectionX, y: sectionY} = sectionOverlapping.getPosition();
       const {x: eventX, y: eventY} = event.evt
       ShapeStore.setSectionChild(barrier, sectionOverlapping.id());
-
       const offsetX = eventX - sectionX - barrier.getWidth() / 2;
       const offsetY = eventY - sectionY - barrier.getHeight() / 2;
       barrier.setPosition({x: offsetX, y: offsetY});
     }
-
-    // overlapping barrier
-    const othersOverlapping = ShapeStore.shapeOverlapping(barrier, 'others');
-
-    if (!!othersOverlapping) {
-      barrier.fire('reset', event)
-      return;
-    }
-
-    ShapeStore.addOrEdit(barrier, 'barriers');
+    ShapeStore.addOrEdit(barrier);
   }
 
   /**

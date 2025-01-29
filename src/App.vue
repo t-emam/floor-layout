@@ -18,14 +18,10 @@ const isDragOnProgress = ref(false);
 
 const stageEl = useTemplateRef('stage-el');
 const layerEl = useTemplateRef('layer-el');
-const setCursor = (cursor = 'auto') => {
-  stageEl.value.getNode().container().style.cursor = cursor;
-}
-
-const {buildSection, onSectionDragEnd} = useSection({setCursor, stageEl, layerEl});
-const {buildTable, onTableDragEnd} = useTable({setCursor, stageEl, layerEl});
-const {buildLabel, onLabelDragEnd} = useLabel({setCursor, stageEl, layerEl});
-const {buildBarrier, onBarrierDragEnd} = useBarrier({setCursor, stageEl, layerEl});
+const {buildSection} = useSection();
+const {buildTable} = useTable();
+const {buildLabel} = useLabel();
+const {buildBarrier} = useBarrier();
 
 const configKonva = {
   width: window.innerWidth,
@@ -108,8 +104,8 @@ function onDragItem(type, event) {
       id: `_NEW_${ new Date().getTime().toString() }`,
       x: event.x - 150,
       y: event.y - 150,
-      width: 350,
-      height: 350,
+      width: 450,
+      height: 450,
       type: "section",
       name: `Section ${ label.substring(labelLength - 4, labelLength) }`,
       rotation: 0,
@@ -120,21 +116,19 @@ function onDragItem(type, event) {
     const section = buildSection(attrs);
     const others = ShapeStore.shapeOverlapping(section);
     if (!!others) {
-      setCursor('not-allowed');
-      ShapeStore.destroyShape(section)
-      return setTimeout(() => setCursor(), 1000);
+      // Role:: In case section dropped on shape element ::
+      ShapeStore.setCursorNotAllowed()
+      return ShapeStore.destroyShape(section)
     }
     return nextTick(() => {
       layerEl.value.getNode().add(section);
       layerEl.value.getNode().batchDraw();
-      onSectionDragEnd(event, section)
     })
   }
 
   if (type === 'rectangle' || type === 'circle') {
     return nextTick(() => {
 
-      console.log('event', event);
       const count = ShapeStore.tables.length +1;
       const table = buildTable({
         x: event.x,
@@ -153,22 +147,24 @@ function onDragItem(type, event) {
 
       const section = ShapeStore.shapeOverlapping(table, 'sections');
       const others = ShapeStore.shapeOverlapping(table, 'others');
+
       if (!section || !!others) {
-        setCursor('not-allowed');
-        ShapeStore.destroyShape(table)
-        return setTimeout(() => setCursor(), 1000);
+        ShapeStore.setCursorNotAllowed();
+        return ShapeStore.destroyShape(table);
       }
 
-
-      // set table position
-      const {x: sectionX, y: sectionY} = section.getPosition();
+      const {x: sectionX, y: sectionY} = section.absolutePosition();
       const eventX = event.clientX;
       const eventY = event.clientY;
-      const offsetX = Math.max(eventX - sectionX - table.getWidth() / 2, 0);
-      const offsetY = eventY - sectionY - table.getHeight() / 2;
-      ShapeStore.setSectionChild(table, section.id());
+      let offsetX = Math.max(eventX - sectionX - table.width() / 2, 0);
+      let offsetY = Math.max(eventY - sectionY - table.height() / 2, 0);
+      if( type !== 'rectangle'){
+        offsetX = Math.max(eventX - sectionX - (table.width() / 4 ), 0);
+        offsetY = Math.max(eventY - sectionY - (table.height() / 4 ), 0);
+      }
       table.setPosition({x: offsetX, y: offsetY})
-      onTableDragEnd(event, table)
+      ShapeStore.setSectionChild(table, section.id());
+      ShapeStore.addOrEdit(table);
     })
   }
 
@@ -189,20 +185,19 @@ function onDragItem(type, event) {
       const section = ShapeStore.shapeOverlapping(barrier, 'sections');
       const others = ShapeStore.shapeOverlapping(barrier, 'others');
       if (!section || !!others) {
-        setCursor('not-allowed');
-        ShapeStore.destroyShape(barrier)
-        return setTimeout(() => setCursor(), 1000);
+        // Rule:: In case barrier dropped on section but not on top of shape element ::
+        ShapeStore.setCursorNotAllowed();
+        return ShapeStore.destroyShape(barrier);
       }
 
-      // set table position
-      const {x: sectionX, y: sectionY} = section.getPosition();
+      const {x: sectionX, y: sectionY} = section.getAbsolutePosition();
       const eventX = event.clientX;
       const eventY = event.clientY;
-      const offsetX = eventX - sectionX - barrier.getWidth() / 2;
-      const offsetY = eventY - sectionY - barrier.getHeight() / 2;
-      ShapeStore.setSectionChild(barrier, section.id());
+      const offsetX = eventX - sectionX - barrier.width() / 2;
+      const offsetY = eventY - sectionY - barrier.height() / 2;
       barrier.setPosition({x: offsetX, y: offsetY})
-      onBarrierDragEnd(event, barrier)
+      ShapeStore.setSectionChild(barrier, section.id());
+      ShapeStore.addOrEdit(barrier);
     })
   }
 
@@ -213,7 +208,7 @@ function onDragItem(type, event) {
         id: new Date().getTime().toString(),
         name: "Label Area",
         height: 80,
-        width: 260,
+        width: 120,
         x: event.x,
         y: event.y,
         rotation: 0,
@@ -222,24 +217,26 @@ function onDragItem(type, event) {
 
       label.moveToTop();
 
-      const section = ShapeStore.shapeOverlapping(label, 'sections');
       const others = ShapeStore.shapeOverlapping(label, 'others');
       if (!!others) {
-        setCursor('not-allowed');
-        ShapeStore.destroyShape(label)
-        return setTimeout(() => setCursor(), 1000);
+        // Rule:: In case label dropped on top of another shape element ::
+        ShapeStore.setCursorNotAllowed();
+        return ShapeStore.destroyShape(label);
       }
-      if(section){
-        const {x: sectionX, y: sectionY} = section.getPosition();
+
+      const section = ShapeStore.shapeOverlapping(label, 'sections');
+      if(section) {
+        // Rule:: In case label dropped on section ::
+        const {x: sectionX, y: sectionY} = section.getAbsolutePosition();
         const eventX = event.clientX;
         const eventY = event.clientY;
-        const offsetX = eventX - sectionX - label.getWidth() / 2;
-        const offsetY = eventY - sectionY - label.getHeight() / 2;
+        const offsetX = eventX - sectionX - label.width() / 2;
+        const offsetY = eventY - sectionY - label.height() / 2;
         ShapeStore.setSectionChild(label, section.id());
         label.setPosition({x: offsetX, y: offsetY})
       }
 
-      onLabelDragEnd(event, label)
+      ShapeStore.addOrEdit(label);
     })
   }
 }
@@ -291,7 +288,7 @@ const onDragMove = (event) => {
       }
 
       if (haveIntersection(group.getClientRect(), target.getClientRect())) {
-        onTableDragEnd(target, group, event.evt)
+        // onTableDragEnd(target, group, event.evt)
       }
     });
 

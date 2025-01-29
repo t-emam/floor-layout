@@ -65,7 +65,7 @@ export const ShapeStore = reactive({
    * @returns {null | ovelappingItem: Konva.Group}
    */
   shapeOverlapping(shape, target = 'allShapes') {
-    let ignoreIds = shape?.children?.map(entity => entity.id());
+    let ignoreIds = shape?.children?.filter(entity=>entity?.id()).map(entity => entity.id());
     const shapeBounds = (shape.children?.[0] || shape)?.getClientRect();
     const items = [...this?.[target] || this.allShapes].filter(entity => !ignoreIds?.includes(entity?.id()));
     for (let item of items) {
@@ -97,16 +97,23 @@ export const ShapeStore = reactive({
       return this.setShape(entity, shape)
     }
     this[entity][index] = shape;
-    console.log('Update', this[entity], this[entity][index])
   },
 
   destroyShape(shape) {
     const entity = shape.attrs.entity
     const index = this[entity].findIndex(entity => !!entity && entity.id() === shape.id());
     if (index > -1) {
-      this[entity] = this[entity].splice(index, 1);
+      this[entity].splice(index, 1);
     }
     shape.destroy();
-    shape?.getLayer()?.batchDraw();
+    this.layerEl.getNode()?.getLayer()?.batchDraw();
+  },
+
+  setCursorNotAllowed() {
+    this.stageEl.getNode().container().style.cursor = 'not-allowed';
+    setTimeout(()=>{
+      this.stageEl.getNode().container().style.cursor = 'pointer';
+    }, 1000);
   }
+
 })

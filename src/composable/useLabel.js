@@ -23,21 +23,26 @@ export const useLabel = () => {
     const othersOverlapping = ShapeStore.shapeOverlapping(label, 'others');
 
     if (!!othersOverlapping) {
+      // Rule:: In case label drop on top of shape element ::
       label.fire('reset', event);
-    } else if (!sectionOverlapping && !!label.parent?.id()) { // destroy o return to the previous position
-      label.fire('reset', event);
-    } else if (!label.parent?.id() && sectionOverlapping?.id() && !label.attrs?.is_new) {
-      label.fire('reset', event);
-    } else if (sectionOverlapping && sectionOverlapping?.id() !== label.parent?.id()) {
+    } else if (sectionOverlapping) {
+      // Rule:: In case label drop in section ::
       const {x: sectionX, y: sectionY} = sectionOverlapping.getPosition();
       const {x: eventX, y: eventY} = event.evt
       ShapeStore.setSectionChild(label, sectionOverlapping.id());
       const offsetX = eventX - sectionX - label.getWidth() / 2;
       const offsetY = eventY - sectionY - label.getHeight() / 2;
       label.setPosition({x: offsetX, y: offsetY});
+    } else if (!sectionOverlapping && !!label.parent?.id()) {
+      // Rule:: In case label drop out of section ::
+      ShapeStore.layerEl.getNode().add(label);
+      label.setPosition({
+        x: event.evt.x,
+        y: event.evt.y
+      });
     }
 
-    ShapeStore.addOrEdit(label, 'labels');
+    ShapeStore.addOrEdit(label);
   }
 
   /**
