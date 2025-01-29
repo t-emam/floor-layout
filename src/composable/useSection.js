@@ -152,13 +152,24 @@ export const useSection = ({setCursor = null}) => {
         ShapeStore.addOrEdit(child);
         child.clearCache()
       }
+
+      // if (child instanceof Konva.Text) {
+      //   const currentFontSize = child.fontSize();
+      //   const scaleFactor = Math.min(section.scaleX(), section.scaleY());
+      //   let newFontSize = currentFontSize * scaleFactor;
+      //   const minFontSize = 1;
+      //   const maxFontSize = 8;
+      //   newFontSize = Math.max(minFontSize, Math.min(newFontSize, maxFontSize));
+      //   child.fontSize(newFontSize);
+      //   child.clearCache();
+      // }
     });
 
     section.scaleX(scaleX)
     section.scaleY(scaleY)
 
-    ShapeStore.addOrEdit(section);
     section.clearCache();
+    ShapeStore.addOrEdit(section);
     ShapeStore.layerEl.getNode().batchDraw();
     ShapeStore.stageEl.getNode().batchDraw();
   }
@@ -211,7 +222,6 @@ export const useSection = ({setCursor = null}) => {
     group.add(text);
 
     group['transform'] = new Konva.Transformer({
-      enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
       rotateLineVisible: true,
     });
 

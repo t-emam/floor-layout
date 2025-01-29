@@ -31,7 +31,12 @@ export const useTable = () => {
 
     const othersTable = ShapeStore.shapeOverlapping(table, 'others');
     if (!!othersTable) {
-      return table.fire('reset', event)
+      try {
+        table?.fire('reset', event)
+      } catch (e) {
+        ShapeStore.destroyShape(table)
+      }
+      return
     }
 
     if (!!sectionOverlapping && sectionOverlapping.id() !== table.parent.id()) {

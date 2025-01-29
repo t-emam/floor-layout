@@ -61,10 +61,10 @@ export const ShapeStore = reactive({
   /**
    * Shape Overlapping check
    * @param shape
-   * @param target <string>: 'sections'|'others'
+   * @param target <string>: 'sections'|'others'| 'allShapes'
    * @returns {null | ovelappingItem: Konva.Group}
    */
-  shapeOverlapping(shape, target = null) {
+  shapeOverlapping(shape, target = 'allShapes') {
     let ignoreIds = shape?.children?.map(entity => entity.id());
     const shapeBounds = (shape.children?.[0] || shape)?.getClientRect();
     const items = [...this?.[target] || this.allShapes].filter(entity => !ignoreIds?.includes(entity?.id()));
@@ -104,8 +104,7 @@ export const ShapeStore = reactive({
     const entity = shape.attrs.entity
     const index = this[entity].findIndex(entity => !!entity && entity.id() === shape.id());
     if (index > -1) {
-      this[entity][index] = null;
-      delete this[entity][index];
+      this[entity] = this[entity].splice(index, 1);
     }
     shape.destroy();
     shape?.getLayer()?.batchDraw();

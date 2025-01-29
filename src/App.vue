@@ -106,10 +106,10 @@ function onDragItem(type, event) {
 
     const attrs = {
       id: `_NEW_${ new Date().getTime().toString() }`,
-      x: event.clientX,
-      y: event.clientY,
-      width: 400,
-      height: 400,
+      x: event.x - 150,
+      y: event.y - 150,
+      width: 350,
+      height: 350,
       type: "section",
       name: `Section ${ label.substring(labelLength - 4, labelLength) }`,
       rotation: 0,
@@ -118,8 +118,8 @@ function onDragItem(type, event) {
     }
 
     const section = buildSection(attrs);
-    const otherSection = ShapeStore.shapeOverlapping(section, 'sections');
-    if (!!otherSection) {
+    const others = ShapeStore.shapeOverlapping(section);
+    if (!!others) {
       setCursor('not-allowed');
       ShapeStore.destroyShape(section)
       return setTimeout(() => setCursor(), 1000);
@@ -134,6 +134,7 @@ function onDragItem(type, event) {
   if (type === 'rectangle' || type === 'circle') {
     return nextTick(() => {
 
+      console.log('event', event);
       const count = ShapeStore.tables.length +1;
       const table = buildTable({
         x: event.x,
@@ -142,7 +143,7 @@ function onDragItem(type, event) {
         height: 50,
         type: "table",
         shape: type === 'rectangle' ? "rect" : "circle",
-        id: new Date().getTime(),
+        id: new Date().getTime().toString(),
         name: `T${ count }`,
         number_of_seats: 4,
         rotation: 0,
@@ -213,8 +214,8 @@ function onDragItem(type, event) {
         name: "Label Area",
         height: 80,
         width: 260,
-        x: event.layerX,
-        y: event.layerY,
+        x: event.x,
+        y: event.y,
         rotation: 0,
         bg_color: "transparent",
       })
