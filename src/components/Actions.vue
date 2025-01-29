@@ -18,6 +18,8 @@ const onSave = async () => {
       width: section.width(),
       x: Number(section.x()),
       y: Number(section.y()),
+      scaleX: Number(section.scaleX() || 1),
+      scaleY: Number(section.scaleY() || 1),
       rotation: Number(section.rotation()),
       revenue_center: null,
       children: []
@@ -40,6 +42,8 @@ const onSave = async () => {
         width: child.width(),
         x: Number(child.x()),
         y: Number(child.y()),
+        scaleX: Number(child.scaleX() || 1),
+        scaleY: Number(child.scaleY() || 1),
         rotation: Number(child.attrs.rotation),
         revenue_center: null
       }
@@ -62,6 +66,8 @@ const onSave = async () => {
         width: label.width(),
         x: Number(label.x()),
         y: Number(label.y()),
+        scaleX: Number(label.scaleX() || 1),
+        scaleY: Number(label.scaleY() || 1),
         rotation: Number(label.attrs.rotation),
         revenue_center: null
       }

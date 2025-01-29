@@ -58,6 +58,8 @@ export const useLabel = () => {
       parent_id: attrs.parent_id,
       defaultFill: attrs.bg_color,
       rotation: attrs.rotation,
+      scaleX: attrs.scaleX,
+      scaleY: attrs.scaleY,
       draggable: true,
     });
 

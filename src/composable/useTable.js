@@ -81,6 +81,8 @@ export const useTable = () => {
       name: 'table-group',
       draggable: true,
       number_of_seats: attrs.number_of_seats,
+      scaleX: attrs.scaleX,
+      scaleY: attrs.scaleY,
     });
 
     let table = null;

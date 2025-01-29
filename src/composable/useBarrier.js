@@ -62,6 +62,8 @@ export const useBarrier = () => {
       rotation: attrs.rotation,
       parent_id: attrs.parent_id,
       draggable: true,
+      scaleX: attrs.scaleX,
+      scaleY: attrs.scaleY,
     });
 
     // barrier.on('dragstart', (event) => onBarrierDragStart(event, barrier));

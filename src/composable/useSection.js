@@ -129,31 +129,36 @@ export const useSection = ({setCursor = null}) => {
 
     section.width(newWidth)
     section.height(newHeight)
-    // section.scaleX(scaleX)
-    // section.scaleY(scaleY)
     section.rotation(newRotation);
 
-
     section.getChildren().forEach((child) => {
-      if (child.hasName('barrier')) {
-        // child.scaleX(child.scaleX() * scaleX);
-        // child.scaleY(child.scaleY() * scaleY);
-      }
+      if (child instanceof Konva.Group || child.hasName('barrier')) {
+        const width = child.getClientRect().width;
+        const height = child.getClientRect().height;
 
-      if (child instanceof Konva.Group) {
-        child.width(child.width() * scaleX);
-        child.height(child.height() * scaleY);
+        child.scaleX(child.scaleX() * scaleX);
+        child.scaleY(child.scaleY() * scaleY);
+
+        child.width(width  * scaleX);
+        child.height(height * scaleX);
+
+        child.x(child.x() * scaleX);
+        child.y(child.y() * scaleY);
 
         if (child?.children && child.children[0] && child.children[0] instanceof Konva.Text) {
           const label = child.children[0];
           label.y(label.y() * section.scaleY - 20);
         }
+        ShapeStore.addOrEdit(child);
+        child.clearCache()
       }
-      ShapeStore.addOrEdit(child);
-      child.clearCache()
     });
 
+    section.scaleX(scaleX)
+    section.scaleY(scaleY)
+
     ShapeStore.addOrEdit(section);
+    section.clearCache();
     ShapeStore.layerEl.getNode().batchDraw();
     ShapeStore.stageEl.getNode().batchDraw();
   }
@@ -174,6 +179,8 @@ export const useSection = ({setCursor = null}) => {
       name: attrs.name,
       type: attrs.type,
       draggable: false,
+      scaleX: attrs.scaleX,
+      scaleY: attrs.scaleY,
     });
 
     const section = new Konva.Rect({
