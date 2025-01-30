@@ -33,7 +33,6 @@ export const useSection = () => {
     const otherSections = ShapeStore.shapeOverlapping(section, 'sections')
     const others = ShapeStore.shapeOverlapping(section, 'others');
 
-    console.log('!otherSections && !others',otherSections, others)
     if (!otherSections && !others) {
       // Rule:: In case section dropped in empty space
       return

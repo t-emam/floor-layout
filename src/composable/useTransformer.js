@@ -176,9 +176,17 @@ export const useTransformer = () => {
       ...enabledAnchors(),
       boundBoxFunc: (oldBoundBox, newBoundBox) => {
         // Rule:: Min & Max Shape Size
-        if (newBoundBox.width <= 40 || newBoundBox.height <= 40) {
+        let MAX_SIZE = 200;
+        if (shape.attrs.type === 'barrier') {
+          MAX_SIZE = 10
+        } else if (shape.attrs.type === 'label') {
+          MAX_SIZE = 100
+        }
+
+        if (newBoundBox.width + newBoundBox.height <= MAX_SIZE) {
           return oldBoundBox;
         }
+
         return newBoundBox;
       },
       dragBoundFunc: (position) => {
