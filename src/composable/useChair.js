@@ -1,9 +1,10 @@
 import Konva from "konva";
+import {ShapeStore} from "../Store/ShapeStore.js";
 
 
 export const useChair = (config) => {
 
-  const seatRadius = Math.max(5 + (10 - config.number_of_seats / config.width * 100), 1);
+  const seatRadius = ShapeStore.seatRadius(config);
 
   const calculatePositions = () => {
     const rectangles = [];
@@ -153,6 +154,8 @@ export const useChair = (config) => {
           fill: '#000',
           stroke: '#000',
           strokeWidth: 0,
+          name: 'seat',
+          strokeScaleEnabled: false,
         });
 
         seats.push(seat);
@@ -178,6 +181,8 @@ export const useChair = (config) => {
         x: seatX,
         y: seatY,
         fill: 'black',
+        name: 'seat',
+        strokeScaleEnabled: false,
       });
       seats.push(seat);
       // group.add(seat);

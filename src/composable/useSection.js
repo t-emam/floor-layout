@@ -22,7 +22,7 @@ export const useSection = () => {
    */
   const onSectionDragEnd = (event, section) => {
     event?.evt?.preventDefault()
-    resetTransform(section);
+    // resetTransform(section);
 
     if (event?.target instanceof Konva.Group && event?.target?.id() !== section?.id()) {
       return event?.evt.stopPropagation();
@@ -32,7 +32,7 @@ export const useSection = () => {
 
     if (!otherSections && !others) {
       // Rule:: In case section dropped in empty space
-      return ShapeStore.addOrEdit(section)
+      return
     }
 
     // Rule:: In case section dropped on top of shape or another section
@@ -49,12 +49,17 @@ export const useSection = () => {
    */
   const onSectionDoubleClick = (event, section) => {
     event?.evt?.stopPropagation();
+    ShapeStore.layerSections.forEach((shape) => {
+      if(shape.id() !== section.id()) {
+        resetTransform(shape, 0)
+      }
+    })
     section.draggable(true);
     section.transform.visible();
     section.transform.nodes([section]);
-    section.transform.attrs['is_section'] = true;
     section.getLayer().add(section.transform);
     section.getLayer()?.batchDraw();
+    document.body.style.cursor = 'pointer';
   }
 
   /**
@@ -86,8 +91,6 @@ export const useSection = () => {
     section.rotation(oldSection.rotation());
     section.clearCache()
 
-    ShapeStore.addOrEdit(section);
-
     return nextTick(() => {
       section.getLayer().batchDraw();
       section.getLayer().getStage().batchDraw();
@@ -104,6 +107,7 @@ export const useSection = () => {
     setTimeout(() => {
       section.draggable(false);
       section.transform?.nodes([]);
+      document.body.style.cursor = 'default';
     }, timeout)
   }
 
@@ -114,7 +118,6 @@ export const useSection = () => {
    */
   const onSectionTransformEnd = (event, section) => {
     event.evt.stopPropagation();
-    resetTransform(section)
     onSectionDragEnd(event, section);
 
     const originalWidth = event.target.width();
@@ -149,7 +152,6 @@ export const useSection = () => {
           const label = child.children[0];
           label.y(label.y() * section.scaleY - 20);
         }
-        ShapeStore.addOrEdit(child);
         child.clearCache()
       }
 
@@ -169,9 +171,8 @@ export const useSection = () => {
     // event.target.scaleY(1)
 
     section.clearCache();
-    ShapeStore.addOrEdit(section);
-    ShapeStore.layerEl.getNode().batchDraw();
-    ShapeStore.stageEl.getNode().batchDraw();
+    ShapeStore.layerEl.batchDraw();
+    ShapeStore.stageEl.batchDraw();
   }
 
   /**
@@ -184,14 +185,10 @@ export const useSection = () => {
       id: `${ attrs.id }`,
       x: attrs?.x,
       y: attrs?.y,
-      width: attrs.width,
-      height: attrs.height,
       shape: attrs.shape,
       name: attrs.name,
       type: attrs.type,
       draggable: false,
-      scaleX: attrs.scaleX,
-      scaleY: attrs.scaleY,
     });
 
     const section = new Konva.Rect({
@@ -232,15 +229,15 @@ export const useSection = () => {
 
     group.on('dragstart', (event) => onSectionDragStart(event, group));
     group.on('dragend', (event) => onSectionDragEnd(event, group));
+    group.on('mouseleave', (event) => resetTransform(group));
 
     if (attrs?.rotation) {
       group.rotate(attrs.rotation);
     }
 
-    ShapeStore.layerEl.getNode().add(group);
-    ShapeStore.layerEl.getNode().batchDraw();
+    ShapeStore.layerEl.add(group);
+    ShapeStore.layerEl.batchDraw();
 
-    ShapeStore.setShape('sections', group);
     return group;
   };
 

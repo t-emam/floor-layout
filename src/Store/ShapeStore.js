@@ -2,30 +2,24 @@ import {reactive} from "vue";
 import Konva from "konva";
 
 /**
- * Shape Store - A reactive object to store Konva Stage and Layer elements.
- * This object holds references to the Konva Stage and Layer that can be
- * accessed reactively in Vue components.
+ * Shape Store - A reactive object to store Konva Stage, Layer and shapes elements.
  * @typedef {Object} ShapeStore
- * @property {Konva.Stage|null} stageEl - The Konva Stage element. Initially null.
- * @property {Konva.Layer|null} layerEl - The Konva Layer element. Initially null.
+ * @property {Konva.Stage} stageEl.getNode() - The Konva Stage element. Initially null.
+ * @property {Konva.Layer} layerEl.getNode() - The Konva Layer element. Initially null.
  *
  * @return {ShapeStore} - The reactive ShapeStore object.
  */
 export const ShapeStore = reactive({
   stageEl: null,
   layerEl: null,
-  sections: [],
-  tables: [],
-  labels: [],
-  barriers: [],
 
-  setShape(entity = 'tables', shape) {
-    shape.attrs['entity'] = entity;
-    this[entity].push(shape);
-  },
-
+  /**
+   * Set Child Shape to Section Parent
+   * @param child
+   * @param parentId
+   */
   setSectionChild(child, parentId) {
-    const section = this.sections.find(entity => entity.attrs.id === parentId);
+    const section = this.layerSections.find(entity => entity.id() === parentId);
     if (!section || !parentId) {
       return;
     }
@@ -34,51 +28,78 @@ export const ShapeStore = reactive({
     section.clearCache();
   },
 
-  resetShapes() {
-    this.sections = [];
-    this.tables = [];
-    this.labels = [];
-    this.barriers = [];
+  /**
+   * Layer Sections
+   * @returns Konva.Group[]
+   */
+  get layerSections() {
+    return this.layerEl.children.filter(child => child.attrs.type === 'section')
   },
 
-  get allShapes() {
-    return [
-      ...this.sections,
-      ...this.tables,
-      ...this.labels,
-      ...this.barriers,
-    ]
+  /**
+   * Layer Shapes
+   * @returns Konva.Group[]
+   */
+  get layerShapes() {
+    const shapes = [];
+    [...this.layerSections].forEach(section => {
+      section.children
+        .filter(child => !!child.attrs.type)
+        .forEach((child) => {
+          shapes.push(child)
+        })
+    })
+
+    return shapes
   },
 
-  get others() {
+  /**
+   * Get Shapes type Table
+   * @returns Konva.Group[]
+   */
+  get tables(){
+    return this.layerShapes.filter(shape => shape.attrs.type === 'table')
+  },
+
+  /**
+   * Get Shapes type Labels
+   * @returns Konva.Group[]
+   */
+  get labels(){
+    return this.layerShapes.filter(shape => shape.attrs.type === 'label')
+  },
+
+  /**
+   * Layer All Children's
+   * @returns Konva.Group[]
+   */
+  get layerChildren() {
     return [
-      ...this.tables,
-      ...this.labels,
-      ...this.barriers,
+      ...this.layerSections,
+      ...this.layerShapes,
     ]
   },
 
   /**
    * Shape Overlapping check
    * @param shape
-   * @param target <string>: 'sections'|'others'| 'allShapes'
+   * @param target <string>: 'sections' | 'others' | 'all'
    * @returns {null | ovelappingItem: Konva.Group}
    */
-  shapeOverlapping(shape, target = 'allShapes') {
-    let ignoreIds = shape?.children?.filter(entity=>entity?.id()).map(entity => entity.id());
+  shapeOverlapping(shape, target = 'all') {
+    shape.clearCache();
     const shapeBounds = (shape.children?.[0] || shape)?.getClientRect();
-    const items = [...this?.[target] || this.allShapes].filter(entity => !ignoreIds?.includes(entity?.id()));
-    for (let item of items) {
-      if (shape?.id() === item?.id()) {
-        continue;
-      }
-      const bounds = (item?.children?.[0] || item)?.getClientRect();
-      if (bounds && this.haveIntersection(shapeBounds, bounds)) {
-        return item;
-      }
-    }
 
-    return null
+    let shapes = []
+    if (target === 'sections') {
+      shapes = this.layerSections;
+    } else if (target === 'others') {
+      shapes = this.layerShapes;
+    } else if (target === 'all') {
+      shapes = this.layerChildren;
+    }
+    return shapes.filter(node => node.id() !== shape.id())
+      .find(node => Konva.Util.haveIntersection(shapeBounds, (node.children?.[0] || node)?.getClientRect({relativeTo:shape})))
   },
 
   haveIntersection(r1, r2) {
@@ -90,30 +111,35 @@ export const ShapeStore = reactive({
     );
   },
 
-  addOrEdit(shape) {
-    const entity = shape.attrs.entity
-    const index = this[entity].findIndex(entity => entity?.id() === shape.id());
-    if (index < 0) {
-      return this.setShape(entity, shape)
-    }
-    this[entity][index] = shape;
-  },
-
+  /**
+   * Destroy Shape
+   * @param shape
+   */
   destroyShape(shape) {
-    const entity = shape.attrs.entity
-    const index = this[entity].findIndex(entity => !!entity && entity.id() === shape.id());
-    if (index > -1) {
-      this[entity].splice(index, 1);
-    }
     shape.destroy();
-    this.layerEl.getNode()?.getLayer()?.batchDraw();
+    console.log('destroyed', shape)
+    this.layerEl?.getLayer()?.batchDraw();
   },
 
+  /**
+   * Set Cursor Not Allowed till 1 second
+   * @return {*}
+   */
   setCursorNotAllowed() {
-    this.stageEl.getNode().container().style.cursor = 'not-allowed';
-    setTimeout(()=>{
-      this.stageEl.getNode().container().style.cursor = 'pointer';
+    this.stageEl.container().style.cursor = 'not-allowed';
+    return setTimeout(()=>{
+      this.stageEl.container().style.cursor = 'pointer';
     }, 1000);
+  },
+
+  /**
+   * Set Table Seat Radius
+   * @param config
+   * @returns {number}
+   */
+  seatRadius(config) {
+    window.ShapeStore = this;
+    return Math.max(5 + (10 - config.number_of_seats / config.width * 100), 8);
   }
 
 })

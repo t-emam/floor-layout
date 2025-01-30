@@ -4,95 +4,99 @@ import {SaveIcon} from "lucide-vue-next";
 import {FloorStore} from "../Store/FloorStore.js";
 import {ShapeStore} from "../Store/ShapeStore.js";
 import {ref, defineEmits} from "vue";
+
 const emit = defineEmits(["drawShapes"]);
 
 const data = ref([])
 
 const onSave = async () => {
-  ShapeStore.sections.forEach(section => {
+  const padding = 5;
+  ShapeStore.layerSections.forEach(section => {
+    const width = section.width() + (section.scaleX() !== 1 ? padding : 0);
+    const height = section.height() + (section.scaleY() !== 1 ? padding : 0);
     const payload = {
       id: section.id(),
       type: section.attrs?.type || "section",
       name: section?.findOne(".text")?.attrs?.text,
-      height: section.height(),
-      width: section.width(),
+      height,
+      width,
       x: Number(section.x()),
       y: Number(section.y()),
-      scaleX: Number(section.scaleX() || 1),
-      scaleY: Number(section.scaleY() || 1),
       rotation: Number(section.rotation()),
       revenue_center: null,
       children: []
     };
 
     section.children?.forEach((child) => {
-      if(!child.attrs?.type){
+      if (!child.attrs?.type) {
         return;
       }
-      const name = child.hasName('barrier')?'':child?.findOne(".text")?.attrs?.text;
-      const bg_color = child.hasName('barrier')?'':child?.findOne(".bg_color")?.attrs?.fill;
-      const childPayload = {
+      const name = child.hasName('barrier') ? '' : child?.findOne(".text")?.attrs?.text;
+      const bg_color = child.hasName('barrier') ? '' : child?.findOne(".bg_color")?.attrs?.fill;
+      const width = child.width() + (child.scaleX() !== 1 ? padding : 0);
+      const height = child.height() + (child.scaleY() !== 1 ? padding : 0);
+      payload.children.push({
         type: child.attrs?.type,
         shape: child.attrs?.shape,
         id: child.id(),
         name,
         bg_color,
         number_of_seats: child?.attrs?.number_of_seats,
-        height: child.height(),
-        width: child.width(),
+        height,
+        width,
         x: Number(child.x()),
         y: Number(child.y()),
-        scaleX: Number(child.scaleX() || 1),
-        scaleY: Number(child.scaleY() || 1),
         rotation: Number(child.attrs.rotation),
         revenue_center: null
-      }
-
-      payload.children.push(childPayload);
+      });
     });
 
     data.value.push(payload)
   })
 
   ShapeStore.labels.forEach(label => {
-    if(label.parent instanceof Konva.Layer){
-      const labelPayload = {
+    if (label.parent instanceof Konva.Layer) {
+      const width = label.width() + (label.scaleX() !== 1 ? padding : 0);
+      const height = label.height() + (label.scaleY() !== 1 ? padding : 0);
+      data.value.push({
         type: label.attrs?.type,
         shape: label.attrs?.shape,
         id: label.id(),
         name: label?.findOne(".text")?.attrs?.text,
         bg_color: label?.findOne(".bg_color")?.attrs?.fill,
-        height: label.height(),
-        width: label.width(),
+        height,
+        width,
         x: Number(label.x()),
         y: Number(label.y()),
-        scaleX: Number(label.scaleX() || 1),
-        scaleY: Number(label.scaleY() || 1),
         rotation: Number(label.attrs.rotation),
         revenue_center: null
-      }
-      data.value.push(labelPayload)
+      })
     }
   })
 
-  console.log("onSave", data.value);
+  // console.log("onSave", data.value);
 
-  FloorStore.floor = [];
-  ShapeStore.resetShapes();
+  // FloorStore.floor = [];
+  // ShapeStore.resetShapes();
 
-  ShapeStore.layerEl.getNode().removeChildren();
-  ShapeStore.layerEl.getNode().clearCache();
-  ShapeStore.layerEl.getNode().batchDraw();
-  console.log("ShapeStore.layerEl.getNode()", ShapeStore.layerEl.getNode(), ShapeStore.layerEl.getNode().children);
+  // ShapeStore.layerEl.removeChildren();
+  // ShapeStore.layerEl.clearCache();
+  // ShapeStore.layerEl.batchDraw();
+  // console.log("ShapeStore.layerEl.getNode()", ShapeStore.layerEl.getNode(), ShapeStore.layerEl.children);
+  console.log(JSON.stringify(data.value));
+  navigator.clipboard.writeText(JSON.stringify(data.value))
+      .then(() => {
+        console.log('JSON copied');
+      })
 
-  await setTimeout(()=>{
-    FloorStore.initFloor(data.value)
-    emit('drawShapes');
-    data.value = []
-  },1000)
-  FloorStore.sections.forEach(section=>{
-    section.moveToBottom()
-  })
+  // await setTimeout(()=>{
+  //   FloorStore.initFloor(data.value)
+  //   emit('drawShapes');
+  //   data.value = []
+  // },1000)
+  // FloorStore.sections.forEach(section=>{
+  //   section.moveToBottom()
+  // })
 }
 </script>
 

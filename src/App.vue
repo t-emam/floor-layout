@@ -1,7 +1,5 @@
 <script setup>
-import Konva from "konva";
 import Actions from "./components/Actions.vue";
-import {useTransformer} from "./composable/useTransformer.js";
 import {useBarrier} from "./composable/useBarrier.js";
 import {FloorStore} from './Store/FloorStore.js'
 import ItemsProprieties from "./components/ItemsProprieties.vue";
@@ -14,7 +12,7 @@ import {useLabel} from './composable/useLabel.js';
 import {ShapeStore} from './Store/ShapeStore.js';
 import Zoom from './components/Zoom.vue';
 
-const isDragOnProgress = ref(false);
+const scaleBy = ref(1.009);
 
 const stageEl = useTemplateRef('stage-el');
 const layerEl = useTemplateRef('layer-el');
@@ -77,21 +75,24 @@ const drawFloorEntities = async () => {
 
 onMounted(async () => {
 
-  ShapeStore.stageEl = stageEl.value;
-  ShapeStore.layerEl = layerEl.value;
+  ShapeStore.stageEl = stageEl.value.getNode();
+  ShapeStore.layerEl = layerEl.value.getNode();
 
   FloorStore.initFloor();
   await drawFloorEntities();
 
   const con = stageEl.value.getNode().container();
 
-  con.addEventListener('drop', (e) => {
-    e.preventDefault()
+  con.addEventListener('drop', (event) => {
+    event.preventDefault();
   });
 
   con.addEventListener('dragover', function (e) {
     e.preventDefault();
   });
+
+  layerEl.value.getNode().offsetX(0);
+  layerEl.value.getNode().offsetY(0);
 });
 
 function onDragItem(type, event) {
@@ -128,11 +129,8 @@ function onDragItem(type, event) {
 
   if (type === 'rectangle' || type === 'circle') {
     return nextTick(() => {
-
-      const count = ShapeStore.tables.length +1;
+      const count = ShapeStore.tables.length + 1;
       const table = buildTable({
-        x: event.x,
-        y: event.y,
         width: 50,
         height: 50,
         type: "table",
@@ -142,29 +140,32 @@ function onDragItem(type, event) {
         number_of_seats: 4,
         rotation: 0,
         revenue_center: null,
-        fill:'#E5E5EA'
+        fill: '#E5E5EA'
       })
 
-      const section = ShapeStore.shapeOverlapping(table, 'sections');
-      const others = ShapeStore.shapeOverlapping(table, 'others');
+      table.setPosition({x: event.x, y: event.y});
+      setTimeout(()=>{
+        const section = ShapeStore.shapeOverlapping(table, 'sections');
+        const others = ShapeStore.shapeOverlapping(table, 'others');
 
-      if (!section || !!others) {
-        ShapeStore.setCursorNotAllowed();
-        return ShapeStore.destroyShape(table);
-      }
+        if (!section || !!others) {
+          ShapeStore.setCursorNotAllowed();
+          return ShapeStore.destroyShape(table);
+        }
 
-      const {x: sectionX, y: sectionY} = section.absolutePosition();
-      const eventX = event.clientX;
-      const eventY = event.clientY;
-      let offsetX = Math.max(eventX - sectionX - table.width() / 2, 0);
-      let offsetY = Math.max(eventY - sectionY - table.height() / 2, 0);
-      if( type !== 'rectangle'){
-        offsetX = Math.max(eventX - sectionX - (table.width() / 4 ), 0);
-        offsetY = Math.max(eventY - sectionY - (table.height() / 4 ), 0);
-      }
-      table.setPosition({x: offsetX, y: offsetY})
-      ShapeStore.setSectionChild(table, section.id());
-      ShapeStore.addOrEdit(table);
+        const {x: sectionX, y: sectionY} = section.getPosition();
+        const eventX = event.clientX;
+        const eventY = event.clientY;
+        let offsetX = Math.max(eventX - sectionX - table.width() / 2, 0);
+        let offsetY = Math.max(eventY - sectionY - table.height() / 2, 0);
+        if (type !== 'rectangle') {
+          offsetX = Math.max(eventX - sectionX - (table.width() / 4), 0);
+          offsetY = Math.max(eventY - sectionY - (table.height() / 4), 0);
+        }
+
+        table.setPosition({x: offsetX, y: offsetY})
+        ShapeStore.setSectionChild(table, section.id());
+      }, 2000)
     })
   }
 
@@ -197,7 +198,6 @@ function onDragItem(type, event) {
       const offsetY = eventY - sectionY - barrier.height() / 2;
       barrier.setPosition({x: offsetX, y: offsetY})
       ShapeStore.setSectionChild(barrier, section.id());
-      ShapeStore.addOrEdit(barrier);
     })
   }
 
@@ -209,14 +209,12 @@ function onDragItem(type, event) {
         name: "Label Area",
         height: 80,
         width: 120,
-        x: event.x,
-        y: event.y,
         rotation: 0,
         bg_color: "transparent",
       })
 
       label.moveToTop();
-
+      label.setPosition({x: event.x, y: event.y});
       const others = ShapeStore.shapeOverlapping(label, 'others');
       if (!!others) {
         // Rule:: In case label dropped on top of another shape element ::
@@ -225,87 +223,41 @@ function onDragItem(type, event) {
       }
 
       const section = ShapeStore.shapeOverlapping(label, 'sections');
-      if(section) {
+      if (section) {
         // Rule:: In case label dropped on section ::
         const {x: sectionX, y: sectionY} = section.getAbsolutePosition();
         const eventX = event.clientX;
         const eventY = event.clientY;
         const offsetX = eventX - sectionX - label.width() / 2;
         const offsetY = eventY - sectionY - label.height() / 2;
-        ShapeStore.setSectionChild(label, section.id());
         label.setPosition({x: offsetX, y: offsetY})
+        ShapeStore.setSectionChild(label, section.id());
       }
 
-      ShapeStore.addOrEdit(label);
     })
   }
 }
 
-function onZoom(e) {
-  e.evt.preventDefault();
+
+function onZoom(event) {
+  event.evt.preventDefault();
   const stage = stageEl.value.getNode();
-  const scaleBy = 1.6;
-  let oldScale = stage.scaleX();  // Get the current scale
+  const oldScale = stage.scaleX();
+  const pointer = stage.getPointerPosition();
 
-  // Zoom in or out based on wheel direction
-  const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
-
-  // Apply the new scale to the stage
-  stage.scale({x: newScale, y: newScale});
-
-  // Adjust the stage position to keep the mouse pointer at the same position
-  const pointerPos = stage.getPointerPosition();
   const mousePointTo = {
-    x: (pointerPos.x - stage.x()) / oldScale,
-    y: (pointerPos.y - stage.y()) / oldScale
+    x: (pointer.x - stage.x()) / oldScale,
+    y: (pointer.y - stage.y()) / oldScale,
   };
+  const newScale =
+      event.evt.deltaY > 0 ? oldScale * scaleBy.value : oldScale / scaleBy.value;
 
-  // Update the position of the stage to "zoom in" or "zoom out" on the mouse pointer
-  stage.position({
-    x: pointerPos.x - mousePointTo.x * newScale,
-    y: pointerPos.y - mousePointTo.y * newScale
-  });
-
-  // Redraw the stage to apply the zoom
-  stage.batchDraw();
-}
-
-
-const onDragMove = (event) => {
-  return
-  event.evt.stopPropagation();
-  if (isDragOnProgress.value) {
-    console.log('inprogress')
-    return
-  }
-  isDragOnProgress.value = true
-  nextTick(() => {
-    const target = event.target;
-
-    ShapeStore.tables.forEach((group) => {
-      if (target.id() === group.id()) {
-        return false;
-      }
-
-      if (haveIntersection(group.getClientRect(), target.getClientRect())) {
-        // onTableDragEnd(target, group, event.evt)
-      }
-    });
-
-
-    setTimeout(() => {
-      isDragOnProgress.value = false
-    }, 500)
-  })
-}
-
-function haveIntersection(r1, r2) {
-  return !(
-      r2.x > r1.x + r1.width ||
-      r2.x + r2.width < r1.x ||
-      r2.y > r1.y + r1.height ||
-      r2.y + r2.height < r1.y
-  );
+  stage.scale({x: newScale, y: newScale});
+  const newPos = {
+    x: pointer.x - mousePointTo.x * newScale,
+    y: pointer.y - mousePointTo.y * newScale,
+  };
+  stage.position(newPos);
 }
 
 
@@ -322,11 +274,27 @@ const updateZoom = (zoom = 100) => {
   stage.position(newPos);
   stage.batchDraw();
 };
+
+const onDragMove = (position) =>{
+  // return {
+  //   x: Math.max(0, position.x),
+  //   y: Math.max(0, position.y)
+  // };
+}
+// const onStgDragMove = () =>{
+//   const layer = layerEl.value.getNode();
+//   layer.position({
+//     x:  Math.max(0, layer.x()),
+//     y: Math.max(0, layer.y())
+//   });
+//   layer.batchDraw();
+// }
+
 </script>
 
 <template>
 
-  <Actions @drawShapes="drawFloorEntities" />
+  <Actions @drawShapes="drawFloorEntities"/>
   <ItemsArea @select="({item, event})=>onDragItem(item, event)"/>
   <ItemsProprieties v-model="selectedShape" @update="value=>selectedShape=value"/>
   <div class="flex gap-4 absolute start-4 bottom-2">

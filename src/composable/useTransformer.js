@@ -1,25 +1,19 @@
 import Konva from "konva";
-import {useSection} from "./useSection.js";
 import {nextTick, ref} from "vue";
 import {ShapeStore} from "../Store/ShapeStore.js";
 
-const {resetTransform} = useSection({});
 export const useTransformer = () => {
 
   const transform = ref(null);
   const tempShape = ref(null);
 
   const resetAllTransforms = () => {
-    const allTransformers = ShapeStore.layerEl.getNode().getChildren().filter(child => child instanceof Konva.Transformer);
+    const allTransformers = ShapeStore.layerEl.getChildren().filter(child => child instanceof Konva.Transformer);
     allTransformers.forEach(transformer => {
       if (transformer) {
-        if (transformer.attrs?.is_section) {
-          resetTransform(transformer.parent?.children?.[0], 0);
-        } else {
-          transformer.hide();
-          transformer.nodes([]);
-        }
-        ShapeStore.layerEl.getNode().batchDraw();
+        transformer.hide();
+        transformer.nodes([]);
+        ShapeStore.layerEl.batchDraw();
       }
     });
   }
@@ -35,11 +29,11 @@ export const useTransformer = () => {
     resetAllTransforms()
 
     shape.moveToTop()
-
+    transform.value.moveToTop();
     transform.value.nodes([shape]);
     transform.value.show()
-    ShapeStore.layerEl.getNode().add(transform.value);
-    ShapeStore.layerEl.getNode().batchDraw();
+    ShapeStore.layerEl.add(transform.value);
+    ShapeStore.layerEl.batchDraw();
   }
 
 
@@ -58,7 +52,8 @@ export const useTransformer = () => {
    * @param shape
    */
   const onTransformStart = (event, shape) => {
-    tempShape.value = event.target.clone()
+    tempShape.value = shape.clone();
+    transform.value.moveToTop();
   }
 
   /**
@@ -67,7 +62,7 @@ export const useTransformer = () => {
    * @param shape
    */
   const onTransformDragStart = (event, shape) => {
-    tempShape.value = event.target.clone()
+    tempShape.value = shape.clone();
     shape.moveToTop();
   }
 
@@ -79,10 +74,9 @@ export const useTransformer = () => {
   const onResetTransform = (event, shape) => {
     ShapeStore.setCursorNotAllowed();
     if (!tempShape.value) {
-      debugger
-      return shape.fire('destroy', event)
+      return;
     }
-
+    shape.moveToTop();
     const oldShape = tempShape.value;
 
     const config = oldShape?.attrs;
@@ -95,17 +89,10 @@ export const useTransformer = () => {
     shape.scaleY(config.scaleY);
     shape.rotation(config.rotation);
 
-    if (shape.children && shape.children[0]) {
-      shape.children[0].fill(config?.defaultFill || config?.fill || "#000");
-    } else {
-      shape.fill(config?.defaultFill || config?.fill || "#000");
-    }
-
     if (oldShape.parent && oldShape.parent.id() !== shape.parent.id()) {
       oldShape.parent.add(shape);
     }
 
-    ShapeStore.addOrEdit(shape);
     shape.getLayer().batchDraw();
     shape.getLayer().getStage().batchDraw();
 
@@ -120,29 +107,41 @@ export const useTransformer = () => {
   const onTransformEnd = (event, shape) => {
     transform.value.moveToTop()
 
-
     const width = event.target.width() * event.target.scaleX();
     const height = event.target.height() * event.target.scaleY();
 
     shape.setAttrs({
       width,
       height,
-      x:event.target.x(),
-      y:event.target.y(),
+      x: event.target.x(),
+      y: event.target.y(),
       rotation: shape.rotation(),
+      ...(shape.attrs.type === 'barrier' ? {scaleX: 1, scaleY: 1} : null),
     });
 
-    shape.children.forEach(child => {
+    shape.children?.forEach(child => {
       const width = child.width() * child.scaleX();
       const height = child.height() * child.scaleY();
+      let radius = width / 2;
+      let fontSize = null;
+
+      if (child.hasName('seat')) {
+        radius = ShapeStore.seatRadius(shape.attrs);
+      }
+
+      if (child.hasName('text')) {
+        fontSize = child.fontSize() * child.scaleX();
+      }
 
       child.setAttrs({
         width,
         height,
+        ...(child instanceof Konva.Circle ? {radius} : null),
+        ...(fontSize ? {fontSize} : null),
         scaleX: 1,
         scaleY: 1,
       });
-    })
+    });
 
     shape.getLayer().batchDraw();
     return nextTick(() => {
@@ -161,7 +160,7 @@ export const useTransformer = () => {
 
     const enabledAnchors = () => {
       if (shape.attrs.shape === 'circle') {
-        return { enabledAnchors: ['top-left', 'bottom-right', 'bottom-left', 'top-right'] }
+        return {enabledAnchors: ['top-left', 'bottom-right', 'bottom-left', 'top-right']}
       }
       return null
     }
@@ -171,74 +170,29 @@ export const useTransformer = () => {
       rotateEnabled: true,
       rotateLineVisible: false,
       padding: 5,
-      ignoreStroke: true,
+      ignoreStroke: true, // https://konvajs.org/docs/select_and_transform/Ignore_Stroke_On_Transform.html
+      // centeredScaling: shape?.attrs?.type === 'table', //https://konvajs.org/docs/select_and_transform/Centered_Scaling.html
+      keepRatio: true, // https://konvajs.org/docs/select_and_transform/Keep_Ratio.html
       ...enabledAnchors(),
-      boundBoxFunc: function (oldBoundBox, newBoundBox) {
-        // "boundBox" is an object with
-        // x, y, width, height and rotation properties
-        // transformer tool will try to fit nodes into that box
-
-        // the logic is simple, if new width is too big
-        // we will return previous state
-
-        // console.log('newBoundBox.width',newBoundBox)
-        // transform.value.rotation(newBoundBox.rotation)
-        // transform.value.width(newBoundBox.width)
-        // transform.value.height(newBoundBox.height)
-        // transform.value.x(newBoundBox.x)
-        // transform.value.y(newBoundBox.y)
-
+      boundBoxFunc: (oldBoundBox, newBoundBox) => {
+        // Rule:: Min & Max Shape Size
+        if (newBoundBox.width <= 40 || newBoundBox.height <= 40) {
+          return oldBoundBox;
+        }
         return newBoundBox;
       },
-      anchorDragBoundFunc: function (oldPos, newPos, event) {
-        // oldPos - is old absolute position of the anchor
-        // newPos - is a new (possible) absolute position of the anchor based on pointer position
-        // it is possible that anchor will have a different absolute position after this function
-        // because every anchor has its own limits on position, based on resizing logic
-        // do not snap rotating point
-        if (transform.value.getActiveAnchor() === 'rotater') {
-          return newPos;
-        }
-
-        const dist = Math.sqrt(
-          Math.pow(newPos.x - oldPos.x, 2) + Math.pow(newPos.y - oldPos.y, 2)
-        );
-
-        // do not do any snapping with new absolute position (pointer position)
-        // is too far away from old position
-        if (dist > 10) {
-          return newPos;
-        }
-
-        const closestX = Math.round(newPos.x / shape.attrs.width) * shape.attrs.width;
-        const diffX = Math.abs(newPos.x - closestX);
-
-        const closestY = Math.round(newPos.y / shape.attrs.height) * shape.attrs.height;
-        const diffY = Math.abs(newPos.y - closestY);
-
-        const snappedX = diffX < 10;
-        const snappedY = diffY < 10;
-
-        // a bit different snap strategies based on snap direction
-        // we need to reuse old position for better UX
-        if (snappedX && !snappedY) {
-          return {
-            x: closestX,
-            y: oldPos.y,
-          };
-        } else if (snappedY && !snappedX) {
-          return {
-            x: oldPos.x,
-            y: closestY,
-          };
-        } else if (snappedX && snappedY) {
-          return {
-            x: closestX,
-            y: closestY,
-          };
-        }
-        return newPos;
-      },
+      dragBoundFunc: (position) => {
+        // const minX = 0;
+        // const minY = 0;
+        // const maxX = ShapeStore.layerEl.width() - transform.value.width();
+        // const maxY = ShapeStore.layerEl.height() - transform.value.height();
+        //
+        // return {
+        //   x: Math.max(minX, Math.min(maxX, position.x)),
+        //   y: Math.max(minY, Math.min(maxY, position.y))
+        // };
+        return position
+      }
     });
     shape.on('mousedown', (event) => onTransformerMouseIn(event, shape));
     shape.on('transformstart', (event) => onTransformStart(event, shape));
@@ -246,6 +200,8 @@ export const useTransformer = () => {
     shape.on('dragstart', (event) => onTransformDragStart(event, shape));
     shape.on('reset', (event) => onResetTransform(event, shape));
     shape.on('destroy', (event) => onDestroyTransform(event, shape));
+    shape.on('mouseover', () => document.body.style.cursor = 'pointer');
+    shape.on('mouseout', () => document.body.style.cursor = 'default');
 
     return shape['transformer']
   }

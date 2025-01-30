@@ -5,8 +5,6 @@ import {ref} from "vue";
 
 export const useLabel = () => {
 
-  const tempPosition = ref(null);
-
   /**
    * Handle on Label Drag End event listener
    * @param event
@@ -16,33 +14,27 @@ export const useLabel = () => {
   const onLabelDragEnd = async (event, label) => {
     event?.evt?.preventDefault();
     label.clearCache();
-    label.children[0].fill(label.attrs.defaultFill);
 
     // overlapping
-    const sectionOverlapping = ShapeStore.shapeOverlapping(label, 'sections');
+    const section = ShapeStore.shapeOverlapping(label, 'sections');
     const othersOverlapping = ShapeStore.shapeOverlapping(label, 'others');
 
     if (!!othersOverlapping) {
       // Rule:: In case label drop on top of shape element ::
       label.fire('reset', event);
-    } else if (sectionOverlapping) {
-      // Rule:: In case label drop in section ::
-      const {x: sectionX, y: sectionY} = sectionOverlapping.getPosition();
+    } else if (!section && !!label.parent?.id()) {
+      // Rule:: In case label drop out of section ::
+      ShapeStore.layerEl.add(label);
+      label.setPosition({x: event.evt.x, y: event.evt.y});
+    } else if (!!section && section?.id() !== label.parent?.id()) {
+      // Rule:: In case label drop in other section ::
+      const {x: sectionX, y: sectionY} = section.getPosition();
       const {x: eventX, y: eventY} = event.evt
-      ShapeStore.setSectionChild(label, sectionOverlapping.id());
+      ShapeStore.setSectionChild(label, section.id());
       const offsetX = eventX - sectionX - label.getWidth() / 2;
       const offsetY = eventY - sectionY - label.getHeight() / 2;
       label.setPosition({x: offsetX, y: offsetY});
-    } else if (!sectionOverlapping && !!label.parent?.id()) {
-      // Rule:: In case label drop out of section ::
-      ShapeStore.layerEl.getNode().add(label);
-      label.setPosition({
-        x: event.evt.x,
-        y: event.evt.y
-      });
     }
-
-    ShapeStore.addOrEdit(label);
   }
 
   /**
@@ -61,7 +53,6 @@ export const useLabel = () => {
       width: attrs.width,
       height: attrs.height,
       parent_id: attrs.parent_id,
-      defaultFill: attrs.bg_color,
       rotation: attrs.rotation,
       scaleX: attrs.scaleX,
       scaleY: attrs.scaleY,
@@ -102,10 +93,9 @@ export const useLabel = () => {
     const {buildTransform} = useTransformer();
     buildTransform(group);
 
-    ShapeStore.layerEl.getNode().add(group);
-    ShapeStore.layerEl.getNode().batchDraw();
+    ShapeStore.layerEl.add(group);
+    ShapeStore.layerEl.batchDraw();
 
-    ShapeStore.setShape('labels', group);
     return group;
   };
 

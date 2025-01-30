@@ -5,6 +5,8 @@ import {defineEmits} from "vue"
 const emit = defineEmits(['select']);
 
 const onDragItem = (item, event) => {
+  event.stopPropagation();
+  event.preventDefault();
   emit('select', {item, event});
 }
 </script>
