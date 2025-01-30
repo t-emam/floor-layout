@@ -12,8 +12,9 @@ const data = ref([])
 const onSave = async () => {
   const padding = 5;
   ShapeStore.layerSections.forEach(section => {
-    const width = section.width() + (section.scaleX() !== 1 ? padding : 0);
-    const height = section.height() + (section.scaleY() !== 1 ? padding : 0);
+    const clientRect = section.getClientRect();
+    const width = clientRect.width;
+    const height = clientRect.height;
     const payload = {
       id: section.id(),
       type: section.attrs?.type || "section",
@@ -27,10 +28,14 @@ const onSave = async () => {
       children: []
     };
 
+    console.log(payload);
+
     section.children?.forEach((child) => {
       if (!child.attrs?.type) {
         return;
       }
+      const childClientRect = child.getClientRect();
+      console.log('rect',childClientRect.x,childClientRect.y, 'child', child.x(), child.y())
       const name = child.hasName('barrier') ? '' : child?.findOne(".text")?.attrs?.text;
       const bg_color = child.hasName('barrier') ? '' : child?.findOne(".bg_color")?.attrs?.fill;
       const width = child.width() + (child.scaleX() !== 1 ? padding : 0);
@@ -44,9 +49,9 @@ const onSave = async () => {
         number_of_seats: child?.attrs?.number_of_seats,
         height,
         width,
-        x: Number(child.x()),
-        y: Number(child.y()),
-        rotation: Number(child.attrs.rotation),
+        x: Number(child.x() * child.scaleX()),
+        y: Number(child.y() * child.scaleY()),
+        rotation: Number(child.rotation()),
         revenue_center: null
       });
     });
@@ -55,9 +60,10 @@ const onSave = async () => {
   })
 
   ShapeStore.labels.forEach(label => {
-    if (label.parent instanceof Konva.Layer) {
-      const width = label.width() + (label.scaleX() !== 1 ? padding : 0);
-      const height = label.height() + (label.scaleY() !== 1 ? padding : 0);
+    if (!label.attrs?.parent_id || label.parent instanceof Konva.Layer) {
+      const clientRect = label.getClientRect();
+      const width = clientRect.width;
+      const height = clientRect.height;
       data.value.push({
         type: label.attrs?.type,
         shape: label.attrs?.shape,
@@ -66,9 +72,9 @@ const onSave = async () => {
         bg_color: label?.findOne(".bg_color")?.attrs?.fill,
         height,
         width,
-        x: Number(label.x()),
-        y: Number(label.y()),
-        rotation: Number(label.attrs.rotation),
+        x: Number(clientRect.x),
+        y: Number(clientRect.y),
+        rotation: Number(label.rotation()),
         revenue_center: null
       })
     }

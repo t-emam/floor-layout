@@ -50,7 +50,7 @@ export const ShapeStore = reactive({
         })
     })
 
-    return shapes
+    return [...shapes, ...this.layerLabels]
   },
 
   /**
@@ -62,11 +62,24 @@ export const ShapeStore = reactive({
   },
 
   /**
+   * Get Layer children's type Labels
+   * @returns Konva.Group[]
+   */
+  get layerLabels(){
+    return this.layerEl.children.filter(child => child.attrs.type === 'label');
+  },
+
+  /**
    * Get Shapes type Labels
    * @returns Konva.Group[]
    */
   get labels(){
-    return this.layerShapes.filter(shape => shape.attrs.type === 'label')
+    const sectionLabels = this.layerShapes.filter(shape => shape.attrs.type === 'label');
+    const layerLabels = this.layerLabels
+    return [
+      ...sectionLabels,
+      ...layerLabels
+    ]
   },
 
   /**
@@ -98,7 +111,7 @@ export const ShapeStore = reactive({
     } else if (target === 'all') {
       shapes = this.layerChildren;
     }
-    return shapes.filter(node => node.id() !== shape.id())
+    return shapes.filter(node => node.id() !== shape.id() && node?.parent?.id() !== shape.id())
       .find(node => Konva.Util.haveIntersection(shapeBounds, (node.children?.[0] || node)?.getClientRect({relativeTo:shape})))
   },
 

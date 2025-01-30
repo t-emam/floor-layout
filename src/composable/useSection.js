@@ -12,6 +12,8 @@ export const useSection = () => {
    */
   const onSectionDragStart = (event, section) => {
     section.moveToTop()
+    section.clearCache()
+
     tempSection.value = event.currentTarget.clone()
   }
 
@@ -27,9 +29,11 @@ export const useSection = () => {
     if (event?.target instanceof Konva.Group && event?.target?.id() !== section?.id()) {
       return event?.evt.stopPropagation();
     }
+
     const otherSections = ShapeStore.shapeOverlapping(section, 'sections')
     const others = ShapeStore.shapeOverlapping(section, 'others');
 
+    console.log('!otherSections && !others',otherSections, others)
     if (!otherSections && !others) {
       // Rule:: In case section dropped in empty space
       return
@@ -77,7 +81,7 @@ export const useSection = () => {
    * @param section
    */
   const onSectionReset = (event, section) => {
-    event.evt.stopPropagation();
+    event?.evt?.stopPropagation();
     ShapeStore.setCursorNotAllowed();
     const oldSection = tempSection.value;
     const config = oldSection.attrs;
@@ -120,40 +124,111 @@ export const useSection = () => {
     event.evt.stopPropagation();
     onSectionDragEnd(event, section);
 
-    const originalWidth = event.target.width();
-    const originalHeight = event.target.height();
-    const newRotation = event.target.rotation();
+    section.moveToTop()
 
-    const newWidth = event.target.getClientRect().width;
-    const newHeight = event.target.getClientRect().height;
+    const clientRect = event.target.getClientRect();
+    const width = clientRect.width * event.target.scaleX();
+    const height = clientRect.height * event.target.scaleY();
 
-    const scaleX = newWidth / originalWidth;
-    const scaleY = newHeight / originalHeight;
+    section.setAttrs({
+      width,
+      height,
+      x: event.target.x(),
+      y: event.target.y(),
+      rotation: section.rotation(),
+      ...(section.attrs.type === 'barrier' ? {scaleX: 1, scaleY: 1} : null),
+    });
 
-    event.target.width(newWidth)
-    event.target.height(newHeight)
-    event.target.rotation(newRotation);
+    section.children?.forEach(child => {
+      if(child instanceof Konva.Group) {
+        const childRect = child.getClientRect();
+        const width = childRect.width * child.scaleX();
+        const height = childRect.height * child.scaleY();
+        let radius = width / 2;
+        let fontSize = null;
 
-    event.target.getChildren().forEach((child) => {
-      if (child instanceof Konva.Group || child.hasName('barrier')) {
-        const width = child.getClientRect().width;
-        const height = child.getClientRect().height;
-
-        child.scaleX(child.scaleX() * scaleX);
-        child.scaleY(child.scaleY() * scaleY);
-
-        child.width(width  * scaleX);
-        child.height(height * scaleX);
-
-        child.x(child.x() * scaleX);
-        child.y(child.y() * scaleY);
-
-        if (child?.children && child.children[0] && child.children[0] instanceof Konva.Text) {
-          const label = child.children[0];
-          label.y(label.y() * section.scaleY - 20);
+        if (child.hasName('seat')) {
+          radius = ShapeStore.seatRadius(child.attrs);
         }
-        child.clearCache()
+
+        if (child.hasName('text')) {
+          fontSize = child.fontSize() * child.scaleX();
+        }
+
+        child.setAttrs({
+          width,
+          height,
+          rotation: child.rotation(),
+          x: child.x() * child.scaleX(),
+          y: child.y() * child.scaleY(),
+          ...(child instanceof Konva.Circle ? {radius} : null),
+          ...(fontSize ? {fontSize} : null),
+          scaleX: 1,
+          scaleY: 1,
+        });
+
+        // child?.children?.forEach(groupChild => {
+        //   const groupChildRect = child.getClientRect();
+        //   const width = groupChildRect.width * groupChild.scaleX();
+        //   const height = groupChildRect.height * groupChild.scaleY();
+        //   let radius = width / 2;
+        //   let fontSize = null;
+        //
+        //   if (groupChild.hasName('seat')) {
+        //     radius = ShapeStore.seatRadius(child.attrs);
+        //   }
+        //
+        //   if (groupChild.hasName('text')) {
+        //     fontSize = groupChild.fontSize() * child.scaleX();
+        //   }
+        //
+        //   groupChild.setAttrs({
+        //     width,
+        //     height,
+        //     ...(groupChild instanceof Konva.Circle ? {radius} : null),
+        //     ...(fontSize ? {fontSize} : null),
+        //     scaleX: 1,
+        //     scaleY: 1,
+        //   });
+        // })
       }
+
+    });
+
+
+    // // const originalWidth = event.target.width();
+    // // const originalHeight = event.target.height();
+    // const newRotation = event.target.rotation();
+    // const clientRect = event.target.getClientRect();
+    //
+    // const newWidth = clientRect.width * event.target.scaleX();
+    // const newHeight = clientRect.height * event.target.scaleY();
+    //
+    //
+    // event.target.width(newWidth)
+    // event.target.height(newHeight)
+    // event.target.rotation(newRotation);
+    //
+    // event.target.getChildren().forEach((child) => {
+    //   if (child instanceof Konva.Group || child.hasName('barrier')) {
+    //     const width = child.width() * child.scaleX();
+    //     const height = child.height() * child.scaleY() ;
+    //
+    //     // child.scaleX(child.scaleX() * scaleX);
+    //     // child.scaleY(child.scaleY() * scaleY);
+    //
+    //     child.width(width );
+    //     child.height(height);
+    //
+    //     child.x(child.x() * child.scaleX());
+    //     child.y(child.y() * child.scaleY());
+    //
+    //     if (child?.children && child.children[0] && child.children[0] instanceof Konva.Text) {
+    //       const label = child.children[0];
+    //       label.y(label.y() * section.scaleY - 20);
+    //     }
+    //     child.clearCache()
+    //   }
 
       // if (child instanceof Konva.Text) {
       //   const currentFontSize = child.fontSize();
@@ -165,7 +240,7 @@ export const useSection = () => {
       //   child.fontSize(newFontSize);
       //   child.clearCache();
       // }
-    });
+    // });
 
     // event.target.scaleX(1)
     // event.target.scaleY(1)
@@ -220,6 +295,14 @@ export const useSection = () => {
 
     group['transform'] = new Konva.Transformer({
       rotateLineVisible: true,
+      ignoreStroke:true,
+      boundBoxFunc: (oldBoundBox, newBoundBox) => {
+        // Rule:: Min & Max Shape Size
+        if (newBoundBox.width <= 200 || newBoundBox.height <= 200) {
+          return oldBoundBox;
+        }
+        return newBoundBox;
+      },
     });
 
     group.on('dblclick', event => onSectionDoubleClick(event, group));
