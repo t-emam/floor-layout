@@ -24,7 +24,7 @@ const {buildBarrier} = useBarrier();
 const configKonva = {
   width: window.innerWidth,
   height: window.innerHeight,
-  draggable: false,
+  draggable: true,
 };
 
 const selectedShape = ref(null);

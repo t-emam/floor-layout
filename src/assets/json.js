@@ -15,7 +15,7 @@ export const defaultFloorValues = [
         "shape": "rect",
         "id": "SECTION_1_TABLE_UUID_1",
         "name": "Table 1",
-        "number_of_seats": 10,
+        "number_of_seats": 1,
         "height": 160,
         "width": 160,
         "x": 10,
@@ -28,7 +28,7 @@ export const defaultFloorValues = [
         "shape": "rect",
         "id": "SECTION_1_TABLE_UUID_2",
         "name": "Table 2",
-        "number_of_seats": 8,
+        "number_of_seats": 10,
         "height": 160,
         "width": 160,
         "x": 230,
@@ -209,7 +209,7 @@ export const defaultFloorValues = [
   }
 ]
 
-export let defaultFloorValues2
+export let defaultFloorValues2 = [{"id":"SECTION_UUID_2","type":"section","name":"Indoor","height":677,"width":541,"x":963,"y":103,"rotation":0,"revenue_center":null,"children":[]},{"id":"SECTION_UUID_1","type":"section","name":"Out Door","height":677,"width":401.5,"x":200,"y":103,"rotation":0,"revenue_center":null,"children":[{"type":"table","shape":"rect","id":"SECTION_1_TABLE_UUID_1","name":"Table 1","number_of_seats":1,"height":80,"width":80,"x":10,"y":10,"rotation":0,"revenue_center":null},{"type":"table","shape":"rect","id":"SECTION_1_TABLE_UUID_5","name":"Table 5","number_of_seats":6,"height":156,"width":80,"x":12,"y":120,"rotation":0,"revenue_center":null},{"type":"table","shape":"rect","id":"SECTION_1_TABLE_UUID_5","name":"Table 5","number_of_seats":4,"height":80,"width":80,"x":9,"y":304,"rotation":0,"revenue_center":null},{"type":"table","shape":"rect","id":"SECTION_1_TABLE_UUID_2","name":"Table 2","number_of_seats":10,"height":312,"width":80,"x":118,"y":15,"rotation":0,"revenue_center":null},{"type":"table","shape":"circle","id":"SECTION_1_TABLE_UUID_3","name":"Table 3","number_of_seats":5,"height":117.00000000000001,"width":117.00000000000001,"x":288,"y":68,"rotation":0,"revenue_center":null},{"type":"table","shape":"circle","id":"SECTION_2_TABLE_UUID_2","name":"Table","number_of_seats":2,"height":80,"width":80,"x":298,"y":183,"rotation":0,"revenue_center":null},{"type":"table","shape":"circle","id":"SECTION_2_TABLE_UUID_2","name":"Table","number_of_seats":1,"height":80,"width":80,"x":289,"y":272,"rotation":0,"revenue_center":null},{"type":"table","shape":"rect","id":"1738329772583","name":"T8","number_of_seats":4,"height":80,"width":80,"x":287,"y":360,"rotation":0,"revenue_center":null},{"type":"table","shape":"circle","id":"1738329779617","name":"T9","number_of_seats":4,"height":80,"width":80,"x":178,"y":410,"rotation":0,"revenue_center":null}]}]
 
 export const DATA = ()=>{
   return defaultFloorValues2 || defaultFloorValues

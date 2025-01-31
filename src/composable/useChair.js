@@ -4,8 +4,6 @@ import {ShapeStore} from "../Store/ShapeStore.js";
 
 export const useChair = (config) => {
 
-  const seatRadius = ShapeStore.seatRadius(config);
-
   const calculatePositions = () => {
     const rectangles = [];
     const size = Math.min(config.width, config.height) * 0.1; // Relative size (10% of the smallest dimension)
@@ -78,6 +76,7 @@ export const useChair = (config) => {
   };
 
   const rectangleSeats = () => {
+    let rotation = 0;
     const seats = [];
     const seatCount = config.number_of_seats - 2
 
@@ -108,12 +107,8 @@ export const useChair = (config) => {
       left: isLandscape ? 1 : seatsPerEdge,
     };
 
-    const edges = ['right', 'left'];
+    const edges = ['right', 'left', 'top', 'bottom'];
     let edgeIndex = 0;
-
-
-    seatsOnEachEdge['top'] = 1;
-    seatsOnEachEdge['bottom'] = 1;
 
     while (remainingSeats > 0) {
       seatsOnEachEdge[edges[edgeIndex]]++;
@@ -121,41 +116,49 @@ export const useChair = (config) => {
       edgeIndex = (edgeIndex + 1) % edges.length;
     }
 
-    // Loop through each edge to place seats
-    [...edges, ...['top', 'bottom']].forEach((edge) => {
+    edges.forEach((edge) => {
       const edgeLength = edgeLengths[edge];
       const seatCountOnEdge = seatsOnEachEdge[edge];
-      const seatSpacing = edgeLength / (seatCountOnEdge + 1);
+      const seatSpacing = (edgeLength / (seatCountOnEdge + 1)) + 12;
 
       for (let i = 0; i < seatCountOnEdge; i++) {
         let seatX = 0;
         let seatY = 0;
+        let seatWidth = 10;
+        let seatHeight = 60;
 
         if (edge === 'top') {
-          seatX = edgeCoordinates.top.x + (i + 1) * seatSpacing;
-          seatY = edgeCoordinates.top.y - 10; // Seat slightly above the top
+          seatX = edgeCoordinates.top.x + 10
+          seatY = edgeCoordinates.top.y; // Seat slightly above the top
+          rotation = -90;
+          seatHeight = 60
         } else if (edge === 'right') {
-          seatX = edgeCoordinates.right.x + 10; // Seat slightly to the right
-          seatY = edgeCoordinates.right.y + (i + 1) * seatSpacing;
+          seatX = edgeCoordinates.right.x; // Seat slightly to the right
+          seatY = edgeCoordinates.right.y + (i + 0.2) * seatSpacing;
         } else if (edge === 'bottom') {
-          seatX = edgeCoordinates.bottom.x + (i + 1) * seatSpacing;
+          seatX = edgeCoordinates.bottom.x + 10;
           seatY = edgeCoordinates.bottom.y + 10; // Seat slightly below the bottom
+          rotation = -90;
+          seatHeight = 60;
         } else if (edge === 'left') {
           seatX = edgeCoordinates.left.x - 10; // Seat slightly to the left
-          seatY = edgeCoordinates.left.y + (i + 1) * seatSpacing;
+          seatY = edgeCoordinates.left.y + (i + 0.2) * seatSpacing;
         }
 
-        // Create the seat as a Konva Circle
-        const seat = new Konva.Circle({
+        const seat = new Konva.Rect({
           id: `${ config.id }-seat-${ seats.length }`,
-          radius: seatRadius,
+          width: seatWidth,
+          height: seatHeight,
           x: seatX,
           y: seatY,
           fill: '#000',
           stroke: '#000',
           strokeWidth: 0,
+          fillOpacity: 0.5,
+          rotation,
           name: 'seat',
           strokeScaleEnabled: false,
+          shadowOpacity: 0.5,
         });
 
         seats.push(seat);
@@ -166,26 +169,53 @@ export const useChair = (config) => {
   };
 
   const circleSeats = () => {
-    const angleStep = (2 * Math.PI) / config.number_of_seats;
     const seats = [];
+    const tableRadius = config.radius;
+    const numSeats = config.number_of_seats;
+    const seatWidth = 10;
+    const seatHeight = 40;
+    const angleStep = (2 * Math.PI) / numSeats;  // Angle step per seat
 
-    const radius = (config.width / 2 + config.height / 2) / 2;
-    for (let i = 0; i < config.number_of_seats; i++) {
+    for (let i = 0; i < numSeats; i++) {
       const angle = i * angleStep;
-      const seatX = radius * Math.cos(angle);
-      const seatY = radius * Math.sin(angle);
 
-      const seat = new Konva.Circle({
-        id: `${ config.id }-seat-${ i }`,
-        radius: seatRadius,
-        x: seatX,
-        y: seatY,
-        fill: 'black',
-        name: 'seat',
-        strokeScaleEnabled: false,
+      // Calculate the X and Y positions for the seat (based on the table's radius)
+      const seatX = tableRadius * Math.cos(angle);
+      const seatY = tableRadius * Math.sin(angle);
+
+      const seat = new Konva.Shape({
+        x: seatX - seatWidth / 2,
+        y: seatY - seatHeight / 2,
+        width: seatWidth,
+        height: seatHeight,
+        fill: '#000',
+        cornerRadius: 10,
+        sceneFunc: function (context, shape) {
+          context.save();  // Save the context state
+          // Translate to the center of the seat
+          context.translate(shape.getAttr('width') / 2, shape.getAttr('height') / 2);
+          // Apply rotation to match the table's rounded edge
+          context.rotate(angle);  // Rotate each seat by its angle around the table
+          // Translate back to the top-left corner of the seat
+          context.translate(-shape.getAttr('width') / 2, -shape.getAttr('height') / 2);
+          // Start drawing a seat with a rounded back edge and straight front edge
+          const cornerRadius = 10;  // Radius for the rounded back corners
+          context.beginPath();
+
+          // Draw the back rounded corners (on the part facing the table)
+          context.moveTo(0, cornerRadius);  // Move to the top-left, but down by the corner radius
+          context.arcTo(0, shape.getAttr('height'), cornerRadius, shape.getAttr('height'), cornerRadius);  // bottom-left corner
+          context.lineTo(shape.getAttr('width'), shape.getAttr('height'));  // Draw straight line to the bottom-right corner
+          context.lineTo(shape.getAttr('width'), 0);  // Draw straight line to the top-right corner
+          context.arcTo(0, 0, 0, cornerRadius, cornerRadius);  // top-left corner (back to start)
+
+          context.closePath();
+          context.fillStrokeShape(shape);
+          context.restore();
+        }
       });
+
       seats.push(seat);
-      // group.add(seat);
     }
     return seats
   }
@@ -198,6 +228,6 @@ export const useChair = (config) => {
   }
 
   return {
-    getSeats
+    getSeats,
   }
 }

@@ -35,19 +35,54 @@ export const useTable = () => {
     }
   }
 
+  const getTableDimension = (config) => {
+    const MIN_HEIGHT_SIZE = 80;
+    const MIN_RADIUS_SIZE = 40;
+
+    let height = (config.number_of_seats - 2) * 1.3 * 60 / 2; // table height
+    let width = 80; // Head size for table
+    let radius = height / 2;
+
+    // Min table height is set MIN_HEIGHT_SIZE
+    if(height < MIN_HEIGHT_SIZE) {
+      height = MIN_HEIGHT_SIZE;
+    }
+
+    if(config.shape !== 'circle'){
+      return {
+        width,
+        height,
+      }
+    }
+
+    // Min table radius is set MIN_RADIUS_SIZE
+    if(radius < MIN_RADIUS_SIZE) {
+      radius = MIN_RADIUS_SIZE;
+    }
+
+    width = radius * 2;
+    height = radius * 2;
+
+    return {
+      width,
+      height,
+      radius,
+    }
+  }
+
   /**
    * Build Table Shape handler
    * @param attrs
    * @returns {any}
    */
   const buildTable = (attrs) => {
+
+    const dimensions = getTableDimension(attrs);
     const group = new Konva.Group({
       id: attrs.id,
       x: attrs?.x,
       y: attrs?.y,
-      width: attrs.width,
-      height: attrs.height,
-      fill: '#E5E5EA',
+      ...dimensions,
       type: attrs.type,
       shape: attrs.shape,
       rotation: attrs.rotation,
@@ -61,18 +96,15 @@ export const useTable = () => {
     let table = null;
     const tableConfig = {
       id: attrs.id,
-      width: attrs.width,
-      height: attrs.height,
-      fill: '#E5E5EA',
+      ...dimensions,
+      fill: '#F2F2F7',
       name: 'table',
       strokeScaleEnabled: false,
+      cornerRadius: 5,
     }
 
     if (attrs.shape === 'circle') {
-      table = new Konva.Circle({
-        ...tableConfig,
-        radius: Math.abs(attrs.width / 2),
-      });
+      table = new Konva.Circle(tableConfig);
     } else {
       table = new Konva.Rect(tableConfig);
     }
@@ -83,19 +115,17 @@ export const useTable = () => {
       fontSize: 14,
       fontFamily: 'Roboto',
       fill: 'black',
-      align: 'center',
       name: 'text',
-      verticalAlign: 'middle',
       strokeScaleEnabled: false,
     });
 
     if (attrs.shape === 'rect') {
-      text.x(attrs.width / 2 - text.width() / 2);
-      text.y(attrs.height / 2 - text.height() / 2);
+      text.x(dimensions.width / 2 - text.width() / 2);
+      text.y(dimensions.height / 2 - text.height() / 2);
     } else if (attrs.shape === 'circle') {
-      const radius = (attrs.width / 2);
-      text.x((radius - attrs.width / 2) - text.width() / 2);
-      text.y((radius - attrs.height / 2) - text.height() / 2);
+      const radius = (dimensions.width / 2);
+      text.x((radius - dimensions.width / 2) - text.width() / 2);
+      text.y((radius - dimensions.height / 2) - text.height() / 2);
     }
 
     group.add(table);
