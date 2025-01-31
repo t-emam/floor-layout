@@ -1,7 +1,4 @@
 import Konva from "konva";
-import {ShapeStore} from "../Store/ShapeStore.js";
-
-
 export const useChair = (config) => {
 
   const calculatePositions = () => {
@@ -75,14 +72,12 @@ export const useChair = (config) => {
     return rectangles;
   };
 
-  const rectangleSeats = () => {
+  const rectangleTableSeats = () => {
     let rotation = 0;
     const seats = [];
-    const seatCount = config.number_of_seats - 2
+    const seatCount = config.number_of_seats - 2 // Skip first 2 seats for table heads
 
-    // Determine table orientation: landscape or portrait
-    const isLandscape = config.width > config.height;
-
+    // each side x, y, width, height for top, left, bottom, right
     let edgeCoordinates = {
       top: {x: 0, y: 0, width: config.width, height: 0},
       right: {x: config.width, y: 0, width: 0, height: config.height},
@@ -90,6 +85,7 @@ export const useChair = (config) => {
       left: {x: 0, y: 0, width: 0, height: config.height},
     };
 
+    // edge Depth Size
     const edgeLengths = {
       top: config.width,
       right: config.height,
@@ -97,14 +93,14 @@ export const useChair = (config) => {
       left: config.height,
     };
 
-    const seatsPerEdge = Math.floor(seatCount / 2);
+    const seatsPerEdge = Math.floor(seatCount / 2); // MAKE SURE THE RECTANGLE NOT HAS ODD NUMBER OF SEATS
     let remainingSeats = seatCount % 2;
 
     let seatsOnEachEdge = {
-      top: isLandscape ? seatsPerEdge : 1,
-      right: isLandscape ? 1 : seatsPerEdge,
-      bottom: isLandscape ? seatsPerEdge : 1,
-      left: isLandscape ? 1 : seatsPerEdge,
+      top: 1,
+      right: seatsPerEdge,
+      bottom: 1,
+      left: seatsPerEdge,
     };
 
     const edges = ['right', 'left', 'top', 'bottom'];
@@ -119,7 +115,7 @@ export const useChair = (config) => {
     edges.forEach((edge) => {
       const edgeLength = edgeLengths[edge];
       const seatCountOnEdge = seatsOnEachEdge[edge];
-      const seatSpacing = (edgeLength / (seatCountOnEdge + 1)) + 12;
+      const seatSpacing = (edgeLength / seatCountOnEdge);
 
       for (let i = 0; i < seatCountOnEdge; i++) {
         let seatX = 0;
@@ -129,20 +125,20 @@ export const useChair = (config) => {
 
         if (edge === 'top') {
           seatX = edgeCoordinates.top.x + 10
-          seatY = edgeCoordinates.top.y; // Seat slightly above the top
+          seatY = edgeCoordinates.top.y;
           rotation = -90;
           seatHeight = 60
         } else if (edge === 'right') {
-          seatX = edgeCoordinates.right.x; // Seat slightly to the right
-          seatY = edgeCoordinates.right.y + (i + 0.2) * seatSpacing;
+          seatX = edgeCoordinates.right.x;
+          seatY = edgeCoordinates.right.y + i * seatSpacing + 10;
         } else if (edge === 'bottom') {
           seatX = edgeCoordinates.bottom.x + 10;
-          seatY = edgeCoordinates.bottom.y + 10; // Seat slightly below the bottom
+          seatY = edgeCoordinates.bottom.y + 10;
           rotation = -90;
           seatHeight = 60;
         } else if (edge === 'left') {
-          seatX = edgeCoordinates.left.x - 10; // Seat slightly to the left
-          seatY = edgeCoordinates.left.y + (i + 0.2) * seatSpacing;
+          seatX = edgeCoordinates.left.x - 10;
+          seatY = edgeCoordinates.left.y + i * seatSpacing + 10;
         }
 
         const seat = new Konva.Rect({
@@ -168,63 +164,61 @@ export const useChair = (config) => {
     return seats;
   };
 
-  const circleSeats = () => {
+  const circleTableSeats = () => {
     const seats = [];
-    const tableRadius = config.radius;
+    const tableRadius = config.radius - 5;
     const numSeats = config.number_of_seats;
     const seatWidth = 10;
     const seatHeight = 40;
-    const angleStep = (2 * Math.PI) / numSeats;  // Angle step per seat
+    const angleStep = (2 * Math.PI) / numSeats;
 
     for (let i = 0; i < numSeats; i++) {
-      const angle = i * angleStep;
+      const angle = i * angleStep;  // Calculate the angle for the current seat
 
       // Calculate the X and Y positions for the seat (based on the table's radius)
       const seatX = tableRadius * Math.cos(angle);
       const seatY = tableRadius * Math.sin(angle);
 
       const seat = new Konva.Shape({
-        x: seatX - seatWidth / 2,
-        y: seatY - seatHeight / 2,
+        id: `${ config.id }-seat-${ seats.length }`,
+        x: -seatX - seatWidth / 2,
+        y: -seatY - seatHeight / 2,
         width: seatWidth,
         height: seatHeight,
         fill: '#000',
-        cornerRadius: 10,
-        sceneFunc: function (context, shape) {
-          context.save();  // Save the context state
-          // Translate to the center of the seat
+        sceneFunc: (context, shape) => {
+          context.save();
           context.translate(shape.getAttr('width') / 2, shape.getAttr('height') / 2);
-          // Apply rotation to match the table's rounded edge
-          context.rotate(angle);  // Rotate each seat by its angle around the table
-          // Translate back to the top-left corner of the seat
+          context.rotate(angle);
           context.translate(-shape.getAttr('width') / 2, -shape.getAttr('height') / 2);
-          // Start drawing a seat with a rounded back edge and straight front edge
-          const cornerRadius = 10;  // Radius for the rounded back corners
-          context.beginPath();
+          const cornerRadius = 10;
 
-          // Draw the back rounded corners (on the part facing the table)
-          context.moveTo(0, cornerRadius);  // Move to the top-left, but down by the corner radius
-          context.arcTo(0, shape.getAttr('height'), cornerRadius, shape.getAttr('height'), cornerRadius);  // bottom-left corner
-          context.lineTo(shape.getAttr('width'), shape.getAttr('height'));  // Draw straight line to the bottom-right corner
-          context.lineTo(shape.getAttr('width'), 0);  // Draw straight line to the top-right corner
-          context.arcTo(0, 0, 0, cornerRadius, cornerRadius);  // top-left corner (back to start)
+          // DON'T TOUCH
+          context.beginPath();
+          context.moveTo(0, cornerRadius);  // Move to the top left and down by the corner radius
+          context.arcTo(0, shape.getAttr('height'), tableRadius, shape.getAttr('height'), cornerRadius);  // bottom left rounded corner
+          context.lineTo(shape.getAttr('width'), shape.getAttr('height'));  // draw straight line to the bottom right corner
+          context.lineTo(shape.getAttr('width'), 0);  // draws straight line to the top right corner
+          context.arcTo(0, 0, 0, cornerRadius, cornerRadius);  // top to the left rounded corner (back to start)
+          // DON'T TOUCH
 
           context.closePath();
           context.fillStrokeShape(shape);
           context.restore();
         }
       });
-
       seats.push(seat);
     }
-    return seats
-  }
+
+    return seats;
+  };
+
 
   const getSeats = () => {
     if (config.shape === 'circle') {
-      return circleSeats()
+      return circleTableSeats()
     }
-    return rectangleSeats()
+    return rectangleTableSeats()
   }
 
   return {

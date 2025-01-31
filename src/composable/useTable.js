@@ -37,7 +37,7 @@ export const useTable = () => {
 
   const getTableDimension = (config) => {
     const MIN_HEIGHT_SIZE = 80;
-    const MIN_RADIUS_SIZE = 40;
+    const MIN_RADIUS_SIZE = 50;
 
     let height = (config.number_of_seats - 2) * 1.3 * 60 / 2; // table height
     let width = 80; // Head size for table
@@ -123,9 +123,8 @@ export const useTable = () => {
       text.x(dimensions.width / 2 - text.width() / 2);
       text.y(dimensions.height / 2 - text.height() / 2);
     } else if (attrs.shape === 'circle') {
-      const radius = (dimensions.width / 2);
-      text.x((radius - dimensions.width / 2) - text.width() / 2);
-      text.y((radius - dimensions.height / 2) - text.height() / 2);
+      text.x((dimensions.radius - dimensions.width / 2) - text.width() / 2);
+      text.y((dimensions.radius - dimensions.height / 2) - text.height() / 2);
     }
 
     group.add(table);
