@@ -6,7 +6,7 @@ const props = defineProps({
   selected: Boolean,
 });
 
-const emit = defineEmits(['transformend', 'dragend', 'click']);
+const emit = defineEmits(['transformend','transformstart', 'dragend', 'click']);
 const nodeRef = useTemplateRef('shape');
 const handleDragEnd = (e) => {
   emit('dragend', e, props.config);
@@ -30,6 +30,7 @@ defineExpose({
     }"
     ref="shape"
     @transformend="$emit('transformend', $event)"
+    @transformstart="$emit('transformstart', $event, config)"
     @click="$emit('click', config)"
     @dragend="handleDragEnd"
   >
