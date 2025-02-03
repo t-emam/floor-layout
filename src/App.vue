@@ -293,7 +293,7 @@ const hasIntersection = (event) => {
       .filter(table => table.id() !== shape.id())
 
   const overlappingShape = shapes
-      .find(table => Konva.Util.haveIntersection(shape.getClientRect(), table.getClientRect(shape)))
+      .find(table => Konva.Util.haveIntersection(shape.getClientRect(), table.getClientRect({relativeTo: shape})))
 
   if (!overlappingShape) {
     return null
@@ -518,7 +518,7 @@ function onDragItem(type) {
     shape: type,
   };
   if (type === 'circle' || type === 'rectangle' || type === 'label') {
-    attrs = {...attrs, width: 50, height: 50, shape:type,number_of_seats:4};
+    attrs = {...attrs, width: 50, height: 50, shape: type, number_of_seats: 4};
   } else if (type === 'barrier') {
     attrs = {...attrs, width: 100, height: 7, text: null};
   } else if (type === 'section') {
@@ -541,7 +541,7 @@ function onDropItem(event, shape) {
 }
 
 const checkOverlappingAndResetItem = (event) => {
-  nextTick(()=>{
+  nextTick(() => {
     const overlapping = hasIntersection(event);
     if (!!overlapping && tempShape.value?.id === event.target.id()) {
 
@@ -749,8 +749,11 @@ function onZoom(e) {
       <v-transformer
           ref="transformer"
           :config="{
-          rotateEnabled: selectedShape?.shape === 'rectangle',
+          rotateLineVisible:true,
+          rotateEnabled:true,
           centeredScaling: true,
+          resizeEnabled: true,
+          padding: 5,
           rotationSnaps: [0, 90, 180, 270],
           boundBoxFunc: (oldBoundBox, newBoundBox) => {
             if (

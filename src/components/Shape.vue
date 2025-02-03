@@ -95,21 +95,17 @@ const circleTableSeats = (config) => {
 const calculatePositions = (config) => {
   console.log('config', config)
   let rectangles = [];
-  const size = Math.min(config.width, config.height) * 0.1; // Relative size (10% of the smallest dimension)
-  const padding = 5; // Space between the table and the rectangles
+  const size = Math.min(config.width, config.height) * 0.1; // Seat size (10% of the smallest dimension)
+  const padding = 10; // Space between the table and the seats
 
   if (config.shape === 'circle') {
-    // Elliptical seat arrangement
-    const radiusX = config.width / 2 + size + padding; // Adjust radius for x-axis
-    const radiusY = config.height / 2 + size + padding; // Adjust radius for y-axis
-
+    const radius = (config.height / 2 + padding + size/2)
     for (let i = 0; i < config.number_of_seats; i++) {
-      const angle = (i / config.number_of_seats) * 2 * Math.PI;
-      const x = radiusX * Math.cos(angle); // Elliptical x-coordinate
-      const y = radiusY * Math.sin(angle); // Elliptical y-coordinate
+      const angleStep = (i / config.number_of_seats) * (2 * Math.PI);
+      const x = radius * Math.cos(angleStep) - size / 2;
+      const y = radius * Math.sin(angleStep) - size / 2;
       rectangles.push({x, y, width: size, height: size});
     }
-    // rectangles = circleTableSeats(config)
   } else {
     // Rectangular seat arrangement
     const aspectRatio = config.width / config.height;
